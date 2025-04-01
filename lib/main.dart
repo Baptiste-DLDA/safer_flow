@@ -156,7 +156,7 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               flex: 1,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(17.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                   child: FlutterMap(
