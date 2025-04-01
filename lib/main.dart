@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
-
 class EauPotableApi {
-  final String rootPath = 'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
+  final String rootPath =
+      'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
   Future<List<dynamic>> getResults() async {
@@ -34,7 +34,6 @@ class MyApp extends StatefulWidget {
   @override
   State<MyApp> createState() => _MyAppState();
 }
-
 
 class _MyAppState extends State<MyApp> {
   final EauPotableApi api = EauPotableApi();
@@ -65,8 +64,10 @@ class _MyAppState extends State<MyApp> {
     try {
       final results = await api.getResults();
       final inputDept = _deptController.text.trim().toLowerCase();
-      final deptResults = results.where((r) =>
-      r['nom_departement']?.toString().toLowerCase() == inputDept).toList();
+      final deptResults = results
+          .where((r) =>
+              r['nom_departement']?.toString().toLowerCase() == inputDept)
+          .toList();
 
       _allResults = deptResults;
 
@@ -94,18 +95,17 @@ class _MyAppState extends State<MyApp> {
       _filteredResults = [];
     });
     if (param != null) {
-      final filtered = _allResults.where((e) => e['libelle_parametre'] == param)
-          .toList();
-      final years = filtered.map((e) =>
-          e['date_prelevement']?.toString().substring(0, 4))
+      final filtered =
+          _allResults.where((e) => e['libelle_parametre'] == param).toList();
+      final years = filtered
+          .map((e) => e['date_prelevement']?.toString().substring(0, 4))
           .whereType<String>()
           .toSet()
           .toList();
       setState(() => _availableYears = years);
       if (years.isEmpty) {
-        setState(() =>
-        _error =
-        'Aucune date disponible pour ce paramètre dans ce département.');
+        setState(() => _error =
+            'Aucune date disponible pour ce paramètre dans ce département.');
       } else {
         setState(() => _error = '');
       }
@@ -124,7 +124,6 @@ class _MyAppState extends State<MyApp> {
             date != null &&
             date.toString().startsWith(year);
       }).toList();
-
 
       final seenUnits = <String>{};
       final filtered = <Map<String, dynamic>>[];
@@ -145,9 +144,6 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -159,77 +155,81 @@ class _MyAppState extends State<MyApp> {
             // 🗺️ Carte interactive
             Expanded(
               flex: 1,
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                    initialCenter: LatLng(46.603354, 1.888334), // Centre France
-                    initialZoom: 5.5,
-                    onTap: (tapPosition, point) async {
-
-                      setState(() {
-                        _selectedPosition = point; // mets à jour le marker
-                      });
-                      //_mapController.move(point, 7.5); // a enlever si on veut pas que ca s'actualise
-
-                      final lat = point.latitude;
-                      final lon = point.longitude;
-
-                      final url = Uri.parse(
-                          'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json');
-
-                      try {
-                        final response = await http.get(url, headers: {
-                          'User-Agent': 'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
-                        });
-
-                        if (response.statusCode == 200) {
-                          final data = json.decode(response.body);
-                          final address = data['address'];
-                          final departement = address['county'] ??
-                              address['state_district'] ??
-                              address['state'] ??
-                              'Département inconnu';
-                          print("Adresse complète : ${jsonEncode(address)}");
-
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(20)),
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                        initialCenter:
+                            LatLng(46.603354, 1.888334), // Centre France
+                        initialZoom: 5.5,
+                        onTap: (tapPosition, point) async {
                           setState(() {
-                            _deptController.text = departement;
+                            _selectedPosition = point; // mets à jour le marker
                           });
+                          //_mapController.move(point, 7.5); // a enlever si on veut pas que ca s'actualise
 
-                          print("Département détecté : $departement");
-                          fetchInitialResults(); // lance la recherche
-                        } else {
-                          print("Erreur API : ${response.statusCode}");
-                        }
-                      } catch (e) {
-                        print("Erreur reverse geocoding : $e");
-                      }
-                    }
+                          final lat = point.latitude;
+                          final lon = point.longitude;
 
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                    "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                    tileProvider: CancellableNetworkTileProvider(),
-                  ),
+                          final url = Uri.parse(
+                              'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json');
 
-                  if (_selectedPosition != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _selectedPosition!,
-                          width: 40,
-                          height: 40,
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.red,
-                            size: 40,
-                          ),
+                          try {
+                            final response = await http.get(url, headers: {
+                              'User-Agent':
+                                  'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
+                            });
+
+                            if (response.statusCode == 200) {
+                              final data = json.decode(response.body);
+                              final address = data['address'];
+                              final departement = address['county'] ??
+                                  address['state_district'] ??
+                                  address['state'] ??
+                                  'Département inconnu';
+                              print(
+                                  "Adresse complète : ${jsonEncode(address)}");
+
+                              setState(() {
+                                _deptController.text = departement;
+                              });
+
+                              print("Département détecté : $departement");
+                              fetchInitialResults(); // lance la recherche
+                            } else {
+                              print("Erreur API : ${response.statusCode}");
+                            }
+                          } catch (e) {
+                            print("Erreur reverse geocoding : $e");
+                          }
+                        }),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        tileProvider: CancellableNetworkTileProvider(),
+                      ),
+                      if (_selectedPosition != null)
+                        MarkerLayer(
+                          markers: [
+                            Marker(
+                              point: _selectedPosition!,
+                              width: 40,
+                              height: 40,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                            ),
+                          ],
                         ),
-
-                      ],
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
 
@@ -292,14 +292,12 @@ class _MyAppState extends State<MyApp> {
                         itemBuilder: (context, index) {
                           final item = _filteredResults[index];
                           return ListTile(
-                            title: Text(
-                                item['libelle_unite'] ?? 'Unité inconnue'),
+                            title:
+                                Text(item['libelle_unite'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                                  'Date prélèvement : ${item['date_prelevement'] ??
-                                  'Non renseignée'}\n'
-                                  'Résultat : ${item['resultat_numerique'] ??
-                                  'N/A'}',
+                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
+                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
                             ),
                           );
                         },
