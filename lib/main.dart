@@ -17,11 +17,9 @@ class EauPotableApi {
         rootPath,
         queryParameters: {
           'format': 'json',
-          'size': 5000,
+          'size': 10000,
           'code_parametre_se': ["NH4","CL2TOT","PH"],
-          'nom_departement' : departement,
-          'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
-          'date_max_prelevement': "2024-12-31%2023%3A59%3A59"
+          'nom_departement': departement,
         },
       );
       return response.data['data'];
@@ -140,15 +138,21 @@ class _MyAppState extends State<MyApp> {
             date.toString().startsWith(year);
       }).toList();
 
-      final filtered = results.map((result) {
-        return {
-          'libelle_unite': result['libelle_unite'],
-          'date_prelevement': result['date_prelevement'],
-          'nom_commune': result['nom_commune'],
-          'resultat_numerique': result['resultat_numerique'],
-        };
-      }).take(10).toList();
+      final seenUnits = <String>{};
+      final filtered = <Map<String, dynamic>>[];
 
+      for (var result in results) {
+        final unit = result['libelle_unite'];
+        if (unit != null && !seenUnits.contains(unit)) {
+          seenUnits.add(unit);
+          filtered.add({
+            'libelle_unite': unit,
+            'date_prelevement': result['date_prelevement'],
+            'nom_commune': result['nom_commune'],
+            'resultat_numerique': result['resultat_numerique'],
+          });
+        }
+      }
       setState(() => _filteredResults = filtered);
     }
   }
