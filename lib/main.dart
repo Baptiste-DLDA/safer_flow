@@ -11,21 +11,24 @@ class EauPotableApi {
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
-  Future<List<dynamic>> getResults() async {
+  Future<List<dynamic>> getResultsByDepartement(String departement) async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
-          'size': 10000, // augmenter la taille pour plus de résultats
+          'size': 10000,
+          'nom_departement': departement,
         },
       );
       return response.data['data'];
     } catch (e) {
-      print('Erreur : $e');
+      print('Erreur (getResultsByDepartement) : $e');
       return [];
     }
   }
+
+
 }
 
 void main() => runApp(MyApp());
@@ -52,7 +55,7 @@ class _MyAppState extends State<MyApp> {
 
   List<dynamic> _allResults = [];
 
-  void fetchInitialResults() async {
+  void fetchInitialResults(String departement) async {
     setState(() {
       _error = '';
       _filteredResults = [];
@@ -61,31 +64,40 @@ class _MyAppState extends State<MyApp> {
       _selectedParametre = null;
       _selectedYear = null;
     });
+
+    if (departement.trim().isEmpty) {
+      setState(() => _error = 'Veuillez entrer un nom de département.');
+      return;
+    }
+
     try {
-      final results = await api.getResults();
-      final inputDept = _deptController.text.trim().toLowerCase();
-      final deptResults = results
-          .where((r) =>
-              r['nom_departement']?.toString().toLowerCase() == inputDept)
-          .toList();
+      final results = await api.getResultsByDepartement(departement.trim());
 
-      _allResults = deptResults;
+      if (results.isEmpty) {
+        setState(() => _error = 'Aucune donnée trouvée pour ce département.');
+        return;
+      }
 
-      // Paramètres disponibles
-      final parametres = deptResults
+      _allResults = results;
+
+      final parametres = results
           .map((e) => e['libelle_parametre'])
           .whereType<String>()
           .toSet()
           .toList();
-      setState(() => _availableParametres = parametres);
 
-      if (parametres.isEmpty) {
-        setState(() => _error = 'Aucun paramètre trouvé pour ce département.');
-      }
+      setState(() {
+        _availableParametres = parametres;
+        if (parametres.isEmpty) {
+          _error = 'Aucun paramètre trouvé pour ce département.';
+        }
+      });
     } catch (e) {
       setState(() => _error = 'Erreur lors du chargement des données.');
+      print("Erreur fetchInitialResults: $e");
     }
   }
+
 
   void onParametreSelected(String? param) {
     setState(() {
@@ -96,7 +108,7 @@ class _MyAppState extends State<MyApp> {
     });
     if (param != null) {
       final filtered =
-          _allResults.where((e) => e['libelle_parametre'] == param).toList();
+      _allResults.where((e) => e['libelle_parametre'] == param).toList();
       final years = filtered
           .map((e) => e['date_prelevement']?.toString().substring(0, 4))
           .whereType<String>()
@@ -105,7 +117,7 @@ class _MyAppState extends State<MyApp> {
       setState(() => _availableYears = years);
       if (years.isEmpty) {
         setState(() => _error =
-            'Aucune date disponible pour ce paramètre dans ce département.');
+        'Aucune date disponible pour ce paramètre dans ce département.');
       } else {
         setState(() => _error = '');
       }
@@ -149,7 +161,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Qualité de l'eau - Recherche")),
+        appBar:AppBar(
+          title: const Text("Qualité de l'eau - Recherche"),
+          centerTitle: true,
+        ),
         body: Row(
           children: [
             // 🗺️ Carte interactive
@@ -163,7 +178,7 @@ class _MyAppState extends State<MyApp> {
                     mapController: _mapController,
                     options: MapOptions(
                         initialCenter:
-                            LatLng(46.603354, 1.888334), // Centre France
+                        LatLng(46.603354, 1.888334), // Centre France
                         initialZoom: 5.5,
                         onTap: (tapPosition, point) async {
                           setState(() {
@@ -180,7 +195,7 @@ class _MyAppState extends State<MyApp> {
                           try {
                             final response = await http.get(url, headers: {
                               'User-Agent':
-                                  'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
+                              'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
                             });
 
                             if (response.statusCode == 200) {
@@ -198,7 +213,7 @@ class _MyAppState extends State<MyApp> {
                               });
 
                               print("Département détecté : $departement");
-                              fetchInitialResults(); // lance la recherche
+                              fetchInitialResults(departement); // lance la recherche
                             } else {
                               print("Erreur API : ${response.statusCode}");
                             }
@@ -209,7 +224,7 @@ class _MyAppState extends State<MyApp> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         tileProvider: CancellableNetworkTileProvider(),
                       ),
                       if (_selectedPosition != null)
@@ -249,7 +264,9 @@ class _MyAppState extends State<MyApp> {
                     ),
                     const SizedBox(height: 10),
                     ElevatedButton(
-                      onPressed: fetchInitialResults,
+                      onPressed:  () {
+                        fetchInitialResults(_deptController.text);
+                      },
                       child: const Text('Valider le département'),
                     ),
                     const SizedBox(height: 10),
@@ -293,11 +310,11 @@ class _MyAppState extends State<MyApp> {
                           final item = _filteredResults[index];
                           return ListTile(
                             title:
-                                Text(item['libelle_unite'] ?? 'Unité inconnue'),
+                            Text(item['libelle_unite'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
-                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
+                                  'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
+                                  'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
                             ),
                           );
                         },
