@@ -18,7 +18,7 @@ class EauPotableApi {
         queryParameters: {
           'format': 'json',
           'size': 5000,
-          'code_parametre': "1302",
+          'code_parametre_se': ["NH4","CL2TOT","PH"],
           'nom_departement' : departement,
           'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
           'date_max_prelevement': "2024-12-31%2023%3A59%3A59"
