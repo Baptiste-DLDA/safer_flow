@@ -11,25 +11,24 @@ class EauPotableApi {
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
-  Future<List<dynamic>> getResultsByDepartement(String departement) async {
+  Future<List<dynamic>> getResults() async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
-          'size': 10000,
           'code_parametre_se': ["NH4","CL2TOT","PH"],
-          'nom_departement': departement,
+          'size': 5000,
+          'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
+          'date_max_prelevement': "2024-12-31%2023%3A59%3A59"
         },
       );
       return response.data['data'];
     } catch (e) {
-      print('Erreur (getResultsByDepartement) : $e');
+      print('Erreur : $e');
       return [];
     }
   }
-
-
 }
 
 void main() => runApp(MyApp());
@@ -56,7 +55,7 @@ class _MyAppState extends State<MyApp> {
 
   List<dynamic> _allResults = [];
 
-  void fetchInitialResults(String departement) async {
+  void fetchInitialResults() async {
     setState(() {
       _error = '';
       _filteredResults = [];
@@ -65,40 +64,31 @@ class _MyAppState extends State<MyApp> {
       _selectedParametre = null;
       _selectedYear = null;
     });
-
-    if (departement.trim().isEmpty) {
-      setState(() => _error = 'Veuillez entrer un nom de département.');
-      return;
-    }
-
     try {
-      final results = await api.getResultsByDepartement(departement.trim());
+      final results = await api.getResults();
+      final inputDept = _deptController.text.trim().toLowerCase();
+      final deptResults = results
+          .where((r) =>
+      r['nom_departement']?.toString().toLowerCase() == inputDept)
+          .toList();
 
-      if (results.isEmpty) {
-        setState(() => _error = 'Aucune donnée trouvée pour ce département.');
-        return;
-      }
+      _allResults = deptResults;
 
-      _allResults = results;
-
-      final parametres = results
+      // Paramètres disponibles
+      final parametres = deptResults
           .map((e) => e['libelle_parametre'])
           .whereType<String>()
           .toSet()
           .toList();
+      setState(() => _availableParametres = parametres);
 
-      setState(() {
-        _availableParametres = parametres;
-        if (parametres.isEmpty) {
-          _error = 'Aucun paramètre trouvé pour ce département.';
-        }
-      });
+      if (parametres.isEmpty) {
+        setState(() => _error = 'Aucun paramètre trouvé pour ce département.');
+      }
     } catch (e) {
       setState(() => _error = 'Erreur lors du chargement des données.');
-      print("Erreur fetchInitialResults: $e");
     }
   }
-
 
   void onParametreSelected(String? param) {
     setState(() {
@@ -162,17 +152,14 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar:AppBar(
-          title: const Text("Qualité de l'eau - Recherche"),
-          centerTitle: true,
-        ),
+        appBar: AppBar(title: const Text("Qualité de l'eau - Recherche")),
         body: Row(
           children: [
             // 🗺️ Carte interactive
             Expanded(
               flex: 1,
               child: Padding(
-                padding: const EdgeInsets.all(17.0),
+                padding: const EdgeInsets.all(16.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.all(Radius.circular(20)),
                   child: FlutterMap(
@@ -214,7 +201,7 @@ class _MyAppState extends State<MyApp> {
                               });
 
                               print("Département détecté : $departement");
-                              fetchInitialResults(departement); // lance la recherche
+                              fetchInitialResults(); // lance la recherche
                             } else {
                               print("Erreur API : ${response.statusCode}");
                             }
@@ -265,9 +252,7 @@ class _MyAppState extends State<MyApp> {
                     ),
                     const SizedBox(height: 10),
                     ElevatedButton(
-                      onPressed:  () {
-                        fetchInitialResults(_deptController.text);
-                      },
+                      onPressed: fetchInitialResults,
                       child: const Text('Valider le département'),
                     ),
                     const SizedBox(height: 10),
