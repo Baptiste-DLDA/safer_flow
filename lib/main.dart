@@ -11,7 +11,7 @@ class EauPotableApi {
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
-  Future<List<dynamic>> getResults() async {
+  Future<List<dynamic>> getResults(departement) async {
     try {
       final response = await dio.get(
         rootPath,
@@ -20,7 +20,8 @@ class EauPotableApi {
           'code_parametre_se': ["NH4","CL2TOT","PH"],
           'size': 5000,
           'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
-          'date_max_prelevement': "2024-12-31%2023%3A59%3A59"
+          'date_max_prelevement': "2024-12-31%2023%3A59%3A59",
+          "nom_departement": departement
         },
       );
       return response.data['data'];
@@ -65,7 +66,7 @@ class _MyAppState extends State<MyApp> {
       _selectedYear = null;
     });
     try {
-      final results = await api.getResults();
+      final results = await api.getResults(_deptController.text.trim());
       final inputDept = _deptController.text.trim().toLowerCase();
       final deptResults = results
           .where((r) =>
