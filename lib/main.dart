@@ -45,10 +45,9 @@ class _MyAppState extends State<MyApp> {
 
   List<Map<String, dynamic>> _filteredResults = [];
   List<String> _availableParametres = [];
-  List<String> _availableYears = [];
+
 
   String? _selectedParametre;
-  String? _selectedYear;
   String _error = '';
 
   LatLng? _selectedPosition;
@@ -61,9 +60,7 @@ class _MyAppState extends State<MyApp> {
       _error = '';
       _filteredResults = [];
       _availableParametres = [];
-      _availableYears = [];
       _selectedParametre = null;
-      _selectedYear = null;
     });
     try {
       final results = await api.getResults(_deptController.text.trim());
@@ -94,8 +91,6 @@ class _MyAppState extends State<MyApp> {
   void onParametreSelected(String? param) {
     setState(() {
       _selectedParametre = param;
-      _selectedYear = null;
-      _availableYears = [];
       _filteredResults = [];
     });
     if (param != null) {
@@ -106,7 +101,6 @@ class _MyAppState extends State<MyApp> {
           .whereType<String>()
           .toSet()
           .toList();
-      setState(() => _availableYears = years);
       if (years.isEmpty) {
         setState(() => _error =
         'Aucune date disponible pour ce paramètre dans ce département.');
@@ -114,19 +108,13 @@ class _MyAppState extends State<MyApp> {
         setState(() => _error = '');
       }
     }
-  }
-
-  void onYearSelected(String? year) {
     setState(() {
-      _selectedYear = year;
       _filteredResults = [];
     });
-    if (year != null && _selectedParametre != null) {
+    if (_selectedParametre != null) {
       final results = _allResults.where((e) {
-        final date = e['date_prelevement'];
-        return e['libelle_parametre'] == _selectedParametre &&
-            date != null &&
-            date.toString().startsWith(year);
+
+        return e['libelle_parametre'] == _selectedParametre;
       }).toList();
 
       final seenUnits = <String>{};
@@ -153,7 +141,9 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Qualité de l'eau - Recherche")),
+        appBar: AppBar(title: const Text("Qualité de l'eau - Recherche"),
+        centerTitle: true
+        ),
         body: Row(
           children: [
             // 🗺️ Carte interactive
@@ -269,23 +259,6 @@ class _MyAppState extends State<MyApp> {
                           );
                         }).toList(),
                         onChanged: onParametreSelected,
-                      ),
-                    const SizedBox(height: 10),
-                    if (_selectedParametre != null)
-                      DropdownButton<String>(
-                        value: _selectedYear,
-                        hint: const Text('Choisir une année'),
-                        isExpanded: true,
-                        items: _availableYears.map((year) {
-                          return DropdownMenuItem(
-                            value: year,
-                            child: Text(year),
-                          );
-                        }).toList(),
-                        onChanged: onYearSelected,
-                        dropdownColor: _availableYears.isEmpty
-                            ? Colors.red.shade100
-                            : null,
                       ),
                     const SizedBox(height: 10),
                     if (_error.isNotEmpty)
