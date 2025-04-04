@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
+
 // test code review je teste le nom dev
 class EauPotableApi {
   final String rootPath =
@@ -17,7 +19,7 @@ class EauPotableApi {
         rootPath,
         queryParameters: {
           'format': 'json',
-          'code_parametre_se': ["NH4","CL2TOT","PH"],
+          'code_parametre_se': ["NH4", "CL2TOT", "PH"],
           'size': 5000,
           'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
           'date_max_prelevement': "2024-12-31%2023%3A59%3A59",
@@ -45,10 +47,8 @@ class _MyAppState extends State<MyApp> {
 
   List<Map<String, dynamic>> _filteredResults = [];
   List<String> _availableParametres = [];
-  List<String> _availableYears = [];
 
   String? _selectedParametre;
-  String? _selectedYear;
   String _error = '';
 
   LatLng? _selectedPosition;
@@ -61,16 +61,14 @@ class _MyAppState extends State<MyApp> {
       _error = '';
       _filteredResults = [];
       _availableParametres = [];
-      _availableYears = [];
       _selectedParametre = null;
-      _selectedYear = null;
     });
     try {
       final results = await api.getResults(_deptController.text.trim());
       final inputDept = _deptController.text.trim().toLowerCase();
       final deptResults = results
           .where((r) =>
-      r['nom_departement']?.toString().toLowerCase() == inputDept)
+              r['nom_departement']?.toString().toLowerCase() == inputDept)
           .toList();
 
       _allResults = deptResults;
@@ -94,39 +92,29 @@ class _MyAppState extends State<MyApp> {
   void onParametreSelected(String? param) {
     setState(() {
       _selectedParametre = param;
-      _selectedYear = null;
-      _availableYears = [];
       _filteredResults = [];
     });
     if (param != null) {
       final filtered =
-      _allResults.where((e) => e['libelle_parametre'] == param).toList();
+          _allResults.where((e) => e['libelle_parametre'] == param).toList();
       final years = filtered
           .map((e) => e['date_prelevement']?.toString().substring(0, 4))
           .whereType<String>()
           .toSet()
           .toList();
-      setState(() => _availableYears = years);
       if (years.isEmpty) {
         setState(() => _error =
-        'Aucune date disponible pour ce paramètre dans ce département.');
+            'Aucune date disponible pour ce paramètre dans ce département.');
       } else {
         setState(() => _error = '');
       }
     }
-  }
-
-  void onYearSelected(String? year) {
     setState(() {
-      _selectedYear = year;
       _filteredResults = [];
     });
-    if (year != null && _selectedParametre != null) {
+    if (_selectedParametre != null) {
       final results = _allResults.where((e) {
-        final date = e['date_prelevement'];
-        return e['libelle_parametre'] == _selectedParametre &&
-            date != null &&
-            date.toString().startsWith(year);
+        return e['libelle_parametre'] == _selectedParametre;
       }).toList();
 
       final seenUnits = <String>{};
@@ -153,7 +141,9 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        appBar: AppBar(title: const Text("Qualité de l'eau - Recherche")),
+        appBar: AppBar(
+            title: const Text("Qualité de l'eau - Recherche"),
+            centerTitle: true),
         body: Row(
           children: [
             // 🗺️ Carte interactive
@@ -167,7 +157,7 @@ class _MyAppState extends State<MyApp> {
                     mapController: _mapController,
                     options: MapOptions(
                         initialCenter:
-                        LatLng(46.603354, 1.888334), // Centre France
+                            LatLng(46.603354, 1.888334), // Centre France
                         initialZoom: 5.5,
                         onTap: (tapPosition, point) async {
                           setState(() {
@@ -184,7 +174,7 @@ class _MyAppState extends State<MyApp> {
                           try {
                             final response = await http.get(url, headers: {
                               'User-Agent':
-                              'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
+                                  'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
                             });
 
                             if (response.statusCode == 200) {
@@ -213,7 +203,7 @@ class _MyAppState extends State<MyApp> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         tileProvider: CancellableNetworkTileProvider(),
                       ),
                       if (_selectedPosition != null)
@@ -271,23 +261,6 @@ class _MyAppState extends State<MyApp> {
                         onChanged: onParametreSelected,
                       ),
                     const SizedBox(height: 10),
-                    if (_selectedParametre != null)
-                      DropdownButton<String>(
-                        value: _selectedYear,
-                        hint: const Text('Choisir une année'),
-                        isExpanded: true,
-                        items: _availableYears.map((year) {
-                          return DropdownMenuItem(
-                            value: year,
-                            child: Text(year),
-                          );
-                        }).toList(),
-                        onChanged: onYearSelected,
-                        dropdownColor: _availableYears.isEmpty
-                            ? Colors.red.shade100
-                            : null,
-                      ),
-                    const SizedBox(height: 10),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
                     Expanded(
@@ -297,16 +270,43 @@ class _MyAppState extends State<MyApp> {
                           final item = _filteredResults[index];
                           return ListTile(
                             title:
-                            Text(item['libelle_unite'] ?? 'Unité inconnue'),
+                                Text(item['libelle_unite'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                                  'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
-                                  'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
+                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
+                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
                             ),
                           );
                         },
                       ),
                     ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Container(
+                            child: SfCartesianChart(
+                                title: ChartTitle(
+                                    text: 'Half yearly sales analysis'),
+                                //legend: Legend(isVisible: true),
+                                primaryXAxis: CategoryAxis(),
+                                series: <CartesianSeries>[
+                              // Initialize line series
+                              LineSeries<ChartData, String>(
+                                dataSource: [
+                                  // Bind data source
+                                  ChartData('Jan', 35),
+                                  ChartData('Feb', 28),
+                                  ChartData('Mar', 34),
+                                  ChartData('Apr', 32),
+                                  ChartData('May', 40)
+                                ],
+                                xValueMapper: (ChartData data, _) => data.x,
+                                yValueMapper: (ChartData data, _) => data.y,
+                                //dataLabelSettings:DataLabelSettings(isVisible : true)
+                              )
+                            ])),
+                      ),
+                    )
                   ],
                 ),
               ),
@@ -316,4 +316,10 @@ class _MyAppState extends State<MyApp> {
       ),
     );
   }
+}
+
+class ChartData {
+  ChartData(this.x, this.y);
+  final String x;
+  final double? y;
 }

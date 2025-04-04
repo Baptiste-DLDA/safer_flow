@@ -17,6 +17,7 @@ dependencies:
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
   flutter_map_cancellable_tile_provider: ^1.0.0
+  syncfusion_flutter_charts: ^29.1.35
 
 
 
