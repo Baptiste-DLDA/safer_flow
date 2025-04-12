@@ -6,8 +6,46 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:flutter/services.dart';
 
-// test code review je teste le nom dev
+Future<List<Polygon>> loadDepartementPolygons() async {
+  final String geoJsonStr = await rootBundle.loadString('lib/assets/departements.geojson');
+  final Map<String, dynamic> geoJson = jsonDecode(geoJsonStr);
+
+  List<Polygon> polygons = [];
+
+  for (var feature in geoJson['features']) {
+    final geometry = feature['geometry'];
+    if (geometry['type'] == 'Polygon') {
+      final List coords = geometry['coordinates'][0];
+      final List<LatLng> points = coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
+      polygons.add(
+        Polygon(
+          points: points,
+          color: const Color.fromARGB(50, 0, 0, 255),
+          borderColor: const Color.fromARGB(255, 0, 0, 255),
+          borderStrokeWidth: 1.5,
+        ),
+      );
+    } else if (geometry['type'] == 'MultiPolygon') {
+      for (var polygon in geometry['coordinates']) {
+        final List coords = polygon[0];
+        final List<LatLng> points = coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
+        polygons.add(
+          Polygon(
+            points: points,
+            color: const Color.fromARGB(50, 0, 0, 255),
+            borderColor: const Color.fromARGB(255, 0, 0, 255),
+            borderStrokeWidth: 1.5,
+          ),
+        );
+      }
+    }
+  }
+
+  return polygons;
+}
+
 class EauPotableApi {
   final String rootPath =
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
@@ -56,6 +94,18 @@ class _MyAppState extends State<MyApp> {
 
   List<dynamic> _allResults = [];
 
+  List<Polygon> _departementPolygons = []; // 👈 ajouté
+
+  @override
+  void initState() {
+    super.initState();
+    loadDepartementPolygons().then((polygons) {
+      setState(() {
+        _departementPolygons = polygons;
+      });
+    });
+  }
+
   void fetchInitialResults() async {
     setState(() {
       _error = '';
@@ -68,12 +118,11 @@ class _MyAppState extends State<MyApp> {
       final inputDept = _deptController.text.trim().toLowerCase();
       final deptResults = results
           .where((r) =>
-              r['nom_departement']?.toString().toLowerCase() == inputDept)
+      r['nom_departement']?.toString().toLowerCase() == inputDept)
           .toList();
 
       _allResults = deptResults;
 
-      // Paramètres disponibles
       final parametres = deptResults
           .map((e) => e['libelle_parametre'])
           .whereType<String>()
@@ -96,7 +145,7 @@ class _MyAppState extends State<MyApp> {
     });
     if (param != null) {
       final filtered =
-          _allResults.where((e) => e['libelle_parametre'] == param).toList();
+      _allResults.where((e) => e['libelle_parametre'] == param).toList();
       final years = filtered
           .map((e) => e['date_prelevement']?.toString().substring(0, 4))
           .whereType<String>()
@@ -104,7 +153,7 @@ class _MyAppState extends State<MyApp> {
           .toList();
       if (years.isEmpty) {
         setState(() => _error =
-            'Aucune date disponible pour ce paramètre dans ce département.');
+        'Aucune date disponible pour ce paramètre dans ce département.');
       } else {
         setState(() => _error = '');
       }
@@ -146,7 +195,6 @@ class _MyAppState extends State<MyApp> {
             centerTitle: true),
         body: Row(
           children: [
-            // 🗺️ Carte interactive
             Expanded(
               flex: 1,
               child: Padding(
@@ -156,14 +204,12 @@ class _MyAppState extends State<MyApp> {
                   child: FlutterMap(
                     mapController: _mapController,
                     options: MapOptions(
-                        initialCenter:
-                            LatLng(46.603354, 1.888334), // Centre France
+                        initialCenter: LatLng(46.603354, 1.888334),
                         initialZoom: 5.5,
                         onTap: (tapPosition, point) async {
                           setState(() {
-                            _selectedPosition = point; // mets à jour le marker
+                            _selectedPosition = point;
                           });
-                          //_mapController.move(point, 7.5); // a enlever si on veut pas que ca s'actualise
 
                           final lat = point.latitude;
                           final lon = point.longitude;
@@ -173,8 +219,7 @@ class _MyAppState extends State<MyApp> {
 
                           try {
                             final response = await http.get(url, headers: {
-                              'User-Agent':
-                                  'FlutterApp (bdelaverny@gmail.com)' // obligatoire pour Nominatim
+                              'User-Agent': 'FlutterApp (bdelaverny@gmail.com)'
                             });
 
                             if (response.statusCode == 200) {
@@ -184,15 +229,14 @@ class _MyAppState extends State<MyApp> {
                                   address['state_district'] ??
                                   address['state'] ??
                                   'Département inconnu';
-                              print(
-                                  "Adresse complète : ${jsonEncode(address)}");
+                              print("Adresse complète : ${jsonEncode(address)}");
 
                               setState(() {
                                 _deptController.text = departement;
                               });
 
                               print("Département détecté : $departement");
-                              fetchInitialResults(); // lance la recherche
+                              fetchInitialResults();
                             } else {
                               print("Erreur API : ${response.statusCode}");
                             }
@@ -203,9 +247,10 @@ class _MyAppState extends State<MyApp> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         tileProvider: CancellableNetworkTileProvider(),
                       ),
+                      PolygonLayer(polygons: _departementPolygons), // 👈 ajouté
                       if (_selectedPosition != null)
                         MarkerLayer(
                           markers: [
@@ -226,7 +271,6 @@ class _MyAppState extends State<MyApp> {
                 ),
               ),
             ),
-
             Expanded(
               flex: 1,
               child: Padding(
@@ -270,11 +314,11 @@ class _MyAppState extends State<MyApp> {
                           final item = _filteredResults[index];
                           return ListTile(
                             title:
-                                Text(item['libelle_unite'] ?? 'Unité inconnue'),
+                            Text(item['libelle_unite'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
-                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
+                                  'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
+                                  'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
                             ),
                           );
                         },
@@ -283,28 +327,23 @@ class _MyAppState extends State<MyApp> {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: Container(
-                            child: SfCartesianChart(
-                                title: ChartTitle(
-                                    text: 'Half yearly sales analysis'),
-                                //legend: Legend(isVisible: true),
-                                primaryXAxis: CategoryAxis(),
-                                series: <CartesianSeries>[
-                              // Initialize line series
-                              LineSeries<ChartData, String>(
-                                dataSource: [
-                                  // Bind data source
-                                  ChartData('Jan', 35),
-                                  ChartData('Feb', 28),
-                                  ChartData('Mar', 34),
-                                  ChartData('Apr', 32),
-                                  ChartData('May', 40)
-                                ],
-                                xValueMapper: (ChartData data, _) => data.x,
-                                yValueMapper: (ChartData data, _) => data.y,
-                                //dataLabelSettings:DataLabelSettings(isVisible : true)
-                              )
-                            ])),
+                        child: SfCartesianChart(
+                          title: ChartTitle(text: 'Half yearly sales analysis'),
+                          primaryXAxis: CategoryAxis(),
+                          series: <CartesianSeries>[
+                            LineSeries<ChartData, String>(
+                              dataSource: [
+                                ChartData('Jan', 35),
+                                ChartData('Feb', 28),
+                                ChartData('Mar', 34),
+                                ChartData('Apr', 32),
+                                ChartData('May', 40)
+                              ],
+                              xValueMapper: (ChartData data, _) => data.x,
+                              yValueMapper: (ChartData data, _) => data.y,
+                            )
+                          ],
+                        ),
                       ),
                     )
                   ],
