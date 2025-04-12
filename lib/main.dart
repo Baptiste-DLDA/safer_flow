@@ -8,42 +8,33 @@ import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_ti
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:flutter/services.dart';
 
-Future<List<Polygon>> loadDepartementPolygons() async {
+Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr = await rootBundle.loadString('lib/assets/departements.geojson');
   final Map<String, dynamic> geoJson = jsonDecode(geoJsonStr);
 
-  List<Polygon> polygons = [];
+  Map<String, List<LatLng>> contours = {};
 
   for (var feature in geoJson['features']) {
+    final properties = feature['properties'];
+    final nomDept = properties['nom']?.toString().toLowerCase();
+
     final geometry = feature['geometry'];
     if (geometry['type'] == 'Polygon') {
       final List coords = geometry['coordinates'][0];
       final List<LatLng> points = coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
-      polygons.add(
-        Polygon(
-          points: points,
-          color: const Color.fromARGB(50, 0, 0, 255),
-          borderColor: const Color.fromARGB(255, 0, 0, 255),
-          borderStrokeWidth: 1.5,
-        ),
-      );
+      contours[nomDept!] = points;
     } else if (geometry['type'] == 'MultiPolygon') {
+      final List<LatLng> mergedPoints = [];
       for (var polygon in geometry['coordinates']) {
         final List coords = polygon[0];
-        final List<LatLng> points = coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
-        polygons.add(
-          Polygon(
-            points: points,
-            color: const Color.fromARGB(50, 0, 0, 255),
-            borderColor: const Color.fromARGB(255, 0, 0, 255),
-            borderStrokeWidth: 1.5,
-          ),
-        );
+        mergedPoints.addAll(coords.map<LatLng>((c) => LatLng(c[1], c[0])));
       }
+      contours[nomDept!] = mergedPoints;
     }
   }
 
-  return polygons;
+
+  return contours;
 }
 
 class EauPotableApi {
@@ -93,17 +84,38 @@ class _MyAppState extends State<MyApp> {
   final MapController _mapController = MapController();
 
   List<dynamic> _allResults = [];
-
-  List<Polygon> _departementPolygons = []; // 👈 ajouté
+  Map<String, List<LatLng>> _allDeptContours = {};
+  List<Polygon> _visiblePolygons = [];
 
   @override
   void initState() {
     super.initState();
-    loadDepartementPolygons().then((polygons) {
+    loadDepartementContours().then((contours) {
       setState(() {
-        _departementPolygons = polygons;
+        _allDeptContours = contours;
       });
     });
+  }
+
+  void updateVisibleContour(String? nomDept) {
+    if (nomDept == null) return;
+
+    final key = nomDept.trim().toLowerCase();
+    if (_allDeptContours.containsKey(key)) {
+      final points = _allDeptContours[key]!;
+      setState(() {
+        _visiblePolygons = [
+          Polygon(
+            points: points,
+            color: const Color.fromARGB(40, 0, 255, 0),
+            borderColor: const Color.fromARGB(255, 0, 150, 0),
+            borderStrokeWidth: 2,
+          )
+        ];
+      });
+    } else {
+      setState(() => _visiblePolygons = []);
+    }
   }
 
   void fetchInitialResults() async {
@@ -133,6 +145,8 @@ class _MyAppState extends State<MyApp> {
       if (parametres.isEmpty) {
         setState(() => _error = 'Aucun paramètre trouvé pour ce département.');
       }
+
+      updateVisibleContour(_deptController.text);
     } catch (e) {
       setState(() => _error = 'Erreur lors du chargement des données.');
     }
@@ -144,27 +158,7 @@ class _MyAppState extends State<MyApp> {
       _filteredResults = [];
     });
     if (param != null) {
-      final filtered =
-      _allResults.where((e) => e['libelle_parametre'] == param).toList();
-      final years = filtered
-          .map((e) => e['date_prelevement']?.toString().substring(0, 4))
-          .whereType<String>()
-          .toSet()
-          .toList();
-      if (years.isEmpty) {
-        setState(() => _error =
-        'Aucune date disponible pour ce paramètre dans ce département.');
-      } else {
-        setState(() => _error = '');
-      }
-    }
-    setState(() {
-      _filteredResults = [];
-    });
-    if (_selectedParametre != null) {
-      final results = _allResults.where((e) {
-        return e['libelle_parametre'] == _selectedParametre;
-      }).toList();
+      final results = _allResults.where((e) => e['libelle_parametre'] == param).toList();
 
       final seenUnits = <String>{};
       final filtered = <Map<String, dynamic>>[];
@@ -237,6 +231,7 @@ class _MyAppState extends State<MyApp> {
 
                               print("Département détecté : $departement");
                               fetchInitialResults();
+                              updateVisibleContour(departement);
                             } else {
                               print("Erreur API : ${response.statusCode}");
                             }
@@ -250,7 +245,7 @@ class _MyAppState extends State<MyApp> {
                         "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         tileProvider: CancellableNetworkTileProvider(),
                       ),
-                      PolygonLayer(polygons: _departementPolygons), // 👈 ajouté
+                      PolygonLayer(polygons: _visiblePolygons),
                       if (_selectedPosition != null)
                         MarkerLayer(
                           markers: [
@@ -328,21 +323,19 @@ class _MyAppState extends State<MyApp> {
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: SfCartesianChart(
-                          title: ChartTitle(text: 'Half yearly sales analysis'),
+                          title: ChartTitle(text: 'Analyse semestrielle'),
                           primaryXAxis: CategoryAxis(),
-                          series: <CartesianSeries>[
-                            LineSeries<ChartData, String>(
-                              dataSource: [
-                                ChartData('Jan', 35),
-                                ChartData('Feb', 28),
-                                ChartData('Mar', 34),
-                                ChartData('Apr', 32),
-                                ChartData('May', 40)
-                              ],
-                              xValueMapper: (ChartData data, _) => data.x,
-                              yValueMapper: (ChartData data, _) => data.y,
-                            )
-                          ],
+                          series: <CartesianSeries>[LineSeries<ChartData, String>(
+                            dataSource: [
+                              ChartData('Jan', 35),
+                              ChartData('Feb', 28),
+                              ChartData('Mar', 34),
+                              ChartData('Apr', 32),
+                              ChartData('May', 40)
+                            ],
+                            xValueMapper: (ChartData data, _) => data.x,
+                            yValueMapper: (ChartData data, _) => data.y,
+                          )],
                         ),
                       ),
                     )
