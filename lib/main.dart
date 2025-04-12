@@ -8,6 +8,8 @@ import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_ti
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:flutter/services.dart';
 
+// push pour montrer à ma mère
+
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr = await rootBundle.loadString('lib/assets/departements.geojson');
   final Map<String, dynamic> geoJson = jsonDecode(geoJsonStr);
