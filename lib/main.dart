@@ -82,6 +82,8 @@ class _MyAppState extends State<MyApp> {
   String? _selectedParametre;
   String _error = '';
 
+  List<ChartData> _chartData = [];
+
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
@@ -159,26 +161,28 @@ class _MyAppState extends State<MyApp> {
       _selectedParametre = param;
       _filteredResults = [];
     });
+    List<ChartData> chartData = [];
     if (param != null) {
       final results = _allResults.where((e) => e['libelle_parametre'] == param).toList();
 
-      final seenUnits = <String>{};
       final filtered = <Map<String, dynamic>>[];
-
       for (var result in results) {
-        final unit = result['libelle_unite'];
-        if (unit != null && !seenUnits.contains(unit)) {
-          seenUnits.add(unit);
           filtered.add({
-            'libelle_unite': unit,
+            'libelle_parametre': result['libelle_parametre'],
             'date_prelevement': result['date_prelevement'],
             'nom_commune': result['nom_commune'],
             'resultat_numerique': result['resultat_numerique'],
           });
         }
-      }
       setState(() => _filteredResults = filtered);
     }
+    for (var i = 0; i < _filteredResults.length; i++) {
+      chartData.add(ChartData(
+        _filteredResults[i]['date_prelevement'],
+        _filteredResults[i]['resultat_numerique'],
+      ));
+    }
+    setState(() => _chartData = chartData);
   }
 
   @override
@@ -311,7 +315,7 @@ class _MyAppState extends State<MyApp> {
                           final item = _filteredResults[index];
                           return ListTile(
                             title:
-                            Text(item['libelle_unite'] ?? 'Unité inconnue'),
+                            Text(item['libelle_parametre'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
                                   'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
@@ -321,36 +325,31 @@ class _MyAppState extends State<MyApp> {
                         },
                       ),
                     ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: SfCartesianChart(
-                          title: ChartTitle(text: 'Analyse semestrielle'),
-                          primaryXAxis: CategoryAxis(),
-                          series: <CartesianSeries>[LineSeries<ChartData, String>(
-                            dataSource: [
-                              ChartData('Jan', 35),
-                              ChartData('Feb', 28),
-                              ChartData('Mar', 34),
-                              ChartData('Apr', 32),
-                              ChartData('May', 40)
-                            ],
-                            xValueMapper: (ChartData data, _) => data.x,
-                            yValueMapper: (ChartData data, _) => data.y,
-                          )],
+                    if (_filteredResults.isNotEmpty)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: SfCartesianChart(
+                            title: ChartTitle(text: 'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
+                            primaryXAxis: CategoryAxis(),
+                            series: <CartesianSeries>[LineSeries<ChartData, String>(
+                              dataSource: _chartData,
+                              xValueMapper: (ChartData data, _) => data.x,
+                              yValueMapper: (ChartData data, _) => data.y,
+                            )],
+                          ),
                         ),
-                      ),
-                    )
-                  ],
+                      )
+                    ],
+                  ),
                 ),
-              ),
-            )
-          ],
+              )
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
 class ChartData {
   ChartData(this.x, this.y);
