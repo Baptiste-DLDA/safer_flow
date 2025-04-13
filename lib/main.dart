@@ -11,7 +11,8 @@ import 'package:flutter/services.dart';
 // push pour montrer à ma mère
 
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
-  final String geoJsonStr = await rootBundle.loadString('lib/assets/departements.geojson');
+  final String geoJsonStr =
+      await rootBundle.loadString('lib/assets/departements.geojson');
   final Map<String, dynamic> geoJson = jsonDecode(geoJsonStr);
 
   Map<String, List<LatLng>> contours = {};
@@ -23,7 +24,8 @@ Future<Map<String, List<LatLng>>> loadDepartementContours() async {
     final geometry = feature['geometry'];
     if (geometry['type'] == 'Polygon') {
       final List coords = geometry['coordinates'][0];
-      final List<LatLng> points = coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
+      final List<LatLng> points =
+          coords.map<LatLng>((c) => LatLng(c[1], c[0])).toList();
       contours[nomDept!] = points;
     } else if (geometry['type'] == 'MultiPolygon') {
       final List<LatLng> mergedPoints = [];
@@ -35,7 +37,6 @@ Future<Map<String, List<LatLng>>> loadDepartementContours() async {
     }
   }
 
-
   return contours;
 }
 
@@ -44,16 +45,16 @@ class EauPotableApi {
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
-  Future<List<dynamic>> getResults(departement) async {
+  Future<List<dynamic>> getResults(departement, dateMin, dateMax) async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
           'code_parametre_se': ["NH4", "CL2TOT", "PH"],
-          'size': 5000,
-          'date_min_prelevement': "2024-01-01%2000%3A00%3A00",
-          'date_max_prelevement': "2024-12-31%2023%3A59%3A59",
+          'size': 10000,
+          'date_min_prelevement': dateMin,
+          'date_max_prelevement': dateMax,
           "nom_departement": departement
         },
       );
@@ -78,6 +79,8 @@ class _MyAppState extends State<MyApp> {
 
   List<Map<String, dynamic>> _filteredResults = [];
   List<String> _availableParametres = [];
+
+  Set<String> _yearSelected = {"2025"};
 
   String? _selectedParametre;
   String _error = '';
@@ -129,12 +132,16 @@ class _MyAppState extends State<MyApp> {
       _availableParametres = [];
       _selectedParametre = null;
     });
+    print('$_yearSelected[0]-01-01%2000%3A00%3A00');
     try {
-      final results = await api.getResults(_deptController.text.trim());
+      final results = await api.getResults(
+          _deptController.text.trim(),
+          '${_yearSelected.first}-01-01%2000%3A00%3A00',
+          '${_yearSelected.first}-12-31%2023%3A59%3A59');
       final inputDept = _deptController.text.trim().toLowerCase();
       final deptResults = results
           .where((r) =>
-      r['nom_departement']?.toString().toLowerCase() == inputDept)
+              r['nom_departement']?.toString().toLowerCase() == inputDept)
           .toList();
 
       _allResults = deptResults;
@@ -163,17 +170,18 @@ class _MyAppState extends State<MyApp> {
     });
     List<ChartData> chartData = [];
     if (param != null) {
-      final results = _allResults.where((e) => e['libelle_parametre'] == param).toList();
+      final results =
+          _allResults.where((e) => e['libelle_parametre'] == param).toList();
 
       final filtered = <Map<String, dynamic>>[];
       for (var result in results) {
-          filtered.add({
-            'libelle_parametre': result['libelle_parametre'],
-            'date_prelevement': result['date_prelevement'],
-            'nom_commune': result['nom_commune'],
-            'resultat_numerique': result['resultat_numerique'],
-          });
-        }
+        filtered.add({
+          'libelle_parametre': result['libelle_parametre'],
+          'date_prelevement': result['date_prelevement'],
+          'nom_commune': result['nom_commune'],
+          'resultat_numerique': result['resultat_numerique'],
+        });
+      }
       setState(() => _filteredResults = filtered);
     }
     for (var i = 0; i < _filteredResults.length; i++) {
@@ -229,7 +237,8 @@ class _MyAppState extends State<MyApp> {
                                   address['state_district'] ??
                                   address['state'] ??
                                   'Département inconnu';
-                              print("Adresse complète : ${jsonEncode(address)}");
+                              print(
+                                  "Adresse complète : ${jsonEncode(address)}");
 
                               setState(() {
                                 _deptController.text = departement;
@@ -248,7 +257,7 @@ class _MyAppState extends State<MyApp> {
                     children: [
                       TileLayer(
                         urlTemplate:
-                        "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                         tileProvider: CancellableNetworkTileProvider(),
                       ),
                       PolygonLayer(polygons: _visiblePolygons),
@@ -277,8 +286,47 @@ class _MyAppState extends State<MyApp> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: "2025",
+                          label: Text("2025"),
+                        ),
+                        ButtonSegment(
+                          value: "2024",
+                          label: Text("2024"),
+                        ),
+                        ButtonSegment(
+                          value: "2023",
+                          label: Text("2023"),
+                        ),
+                        ButtonSegment(
+                          value: "2022",
+                          label: Text("2022"),
+                        ),
+                        ButtonSegment(
+                          value: "2021",
+                          label: Text("2021"),
+                        ),
+                        ButtonSegment(
+                          value: "2020",
+                          label: Text("2020"),
+                        ),
+                        ButtonSegment(
+                          value: "2019",
+                          label: Text("2019"),
+                        ),
+                      ],
+                      selected: _yearSelected,
+                      onSelectionChanged: (Set<String> newSelection) {
+                        setState(() {
+                          _yearSelected = newSelection;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 15),
                     TextField(
                       controller: _deptController,
                       decoration: const InputDecoration(
@@ -291,11 +339,11 @@ class _MyAppState extends State<MyApp> {
                       onPressed: fetchInitialResults,
                       child: const Text('Valider le département'),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
                     if (_availableParametres.isNotEmpty)
                       DropdownButton<String>(
                         value: _selectedParametre,
-                        hint: const Text('Choisir un paramètre danalyse'),
+                        hint: const Text("Choisir un paramètre d'analyse"),
                         isExpanded: true,
                         items: _availableParametres.map((param) {
                           return DropdownMenuItem(
@@ -305,7 +353,7 @@ class _MyAppState extends State<MyApp> {
                         }).toList(),
                         onChanged: onParametreSelected,
                       ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
                     Expanded(
@@ -314,12 +362,12 @@ class _MyAppState extends State<MyApp> {
                         itemBuilder: (context, index) {
                           final item = _filteredResults[index];
                           return ListTile(
-                            title:
-                            Text(item['libelle_parametre'] ?? 'Unité inconnue'),
+                            title: Text(
+                                item['libelle_parametre'] ?? 'Unité inconnue'),
                             subtitle: Text(
                               'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                                  'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
-                                  'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
+                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
+                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
                             ),
                           );
                         },
@@ -330,26 +378,30 @@ class _MyAppState extends State<MyApp> {
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: SfCartesianChart(
-                            title: ChartTitle(text: 'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
+                            title: ChartTitle(
+                                text:
+                                    'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
                             primaryXAxis: CategoryAxis(),
-                            series: <CartesianSeries>[LineSeries<ChartData, String>(
-                              dataSource: _chartData,
-                              xValueMapper: (ChartData data, _) => data.x,
-                              yValueMapper: (ChartData data, _) => data.y,
-                            )],
+                            series: <CartesianSeries>[
+                              LineSeries<ChartData, String>(
+                                dataSource: _chartData,
+                                xValueMapper: (ChartData data, _) => data.x,
+                                yValueMapper: (ChartData data, _) => data.y,
+                              )
+                            ],
                           ),
                         ),
                       )
-                    ],
-                  ),
+                  ],
                 ),
-              )
-            ],
-          ),
+              ),
+            )
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
+}
 
 class ChartData {
   ChartData(this.x, this.y);
