@@ -52,7 +52,7 @@ class EauPotableApi {
         queryParameters: {
           'format': 'json',
           'code_parametre_se': ["NH4", "CL2TOT", "PH"],
-          'size': 10000,
+          'size': 20000,
           'date_min_prelevement': dateMin,
           'date_max_prelevement': dateMax,
           "nom_departement": departement
@@ -81,7 +81,7 @@ class _MyAppState extends State<MyApp> {
   List<String> _availableParametres = [];
 
   Set<String> _yearSelected = {"2025"};
-
+  bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
 
@@ -131,8 +131,8 @@ class _MyAppState extends State<MyApp> {
       _filteredResults = [];
       _availableParametres = [];
       _selectedParametre = null;
+      _isLoading = true;
     });
-    print('$_yearSelected[0]-01-01%2000%3A00%3A00');
     try {
       final results = await api.getResults(
           _deptController.text.trim(),
@@ -161,6 +161,9 @@ class _MyAppState extends State<MyApp> {
     } catch (e) {
       setState(() => _error = 'Erreur lors du chargement des données.');
     }
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   void onParametreSelected(String? param) {
@@ -192,6 +195,8 @@ class _MyAppState extends State<MyApp> {
     }
     setState(() => _chartData = chartData);
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -337,9 +342,11 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(height: 10),
                     ElevatedButton(
                       onPressed: fetchInitialResults,
-                      child: const Text('Valider le département'),
+                      child: const Text('Valider les choix'),
                     ),
                     const SizedBox(height: 15),
+                    _isLoading ? LinearProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.blue)):
+                    const SizedBox(height: 0),
                     if (_availableParametres.isNotEmpty)
                       DropdownButton<String>(
                         value: _selectedParametre,
@@ -353,6 +360,7 @@ class _MyAppState extends State<MyApp> {
                         }).toList(),
                         onChanged: onParametreSelected,
                       ),
+
                     const SizedBox(height: 15),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
