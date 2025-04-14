@@ -45,17 +45,18 @@ class EauPotableApi {
       'https://hubeau.eaufrance.fr/api/v1/qualite_eau_potable/resultats_dis';
   final Dio dio = Dio();
 
-  Future<List<dynamic>> getResults(departement, dateMin, dateMax) async {
+  Future<List<dynamic>> getResults(
+      codeDepartement, dateMin, dateMax, parametre) async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
-          'code_parametre_se': ["NH4", "CL2TOT", "PH"],
-          'size': 20000,
+          'code_departement': codeDepartement,
+          'code_parametre_se': parametre,
+          'size': 5000,
           'date_min_prelevement': dateMin,
           'date_max_prelevement': dateMax,
-          "nom_departement": departement
         },
       );
       return response.data['data'];
@@ -78,7 +79,6 @@ class _MyAppState extends State<MyApp> {
   final TextEditingController _deptController = TextEditingController();
 
   List<Map<String, dynamic>> _filteredResults = [];
-  List<String> _availableParametres = [];
 
   Set<String> _yearSelected = {"2025"};
   bool _isLoading = false;
@@ -87,10 +87,120 @@ class _MyAppState extends State<MyApp> {
 
   List<ChartData> _chartData = [];
 
+  final Map<String, String> parametres = {
+    "pH": "PH",
+    "Ammonium": "NH4",
+    "Chlore": "CL2TOT",
+  };
+
+  final Map<String, String> nomToCodeDepartement = {
+    "Ain": "01",
+    "Aisne": "02",
+    "Allier": "03",
+    "Alpes-de-Haute-Provence": "04",
+    "Hautes-Alpes": "05",
+    "Alpes-Maritimes": "06",
+    "Ardèche": "07",
+    "Ardennes": "08",
+    "Ariège": "09",
+    "Aube": "10",
+    "Aude": "11",
+    "Aveyron": "12",
+    "Bouches-du-Rhône": "13",
+    "Calvados": "14",
+    "Cantal": "15",
+    "Charente": "16",
+    "Charente-Maritime": "17",
+    "Cher": "18",
+    "Corrèze": "19",
+    "Corse-du-Sud": "2A",
+    "Haute-Corse": "2B",
+    "Côte-d'Or": "21",
+    "Côtes-d'Armor": "22",
+    "Creuse": "23",
+    "Dordogne": "24",
+    "Doubs": "25",
+    "Drôme": "26",
+    "Eure": "27",
+    "Eure-et-Loir": "28",
+    "Finistère": "29",
+    "Gard": "30",
+    "Haute-Garonne": "31",
+    "Gers": "32",
+    "Gironde": "33",
+    "Hérault": "34",
+    "Ille-et-Vilaine": "35",
+    "Indre": "36",
+    "Indre-et-Loire": "37",
+    "Isère": "38",
+    "Jura": "39",
+    "Landes": "40",
+    "Loir-et-Cher": "41",
+    "Loire": "42",
+    "Haute-Loire": "43",
+    "Loire-Atlantique": "44",
+    "Loiret": "45",
+    "Lot": "46",
+    "Lot-et-Garonne": "47",
+    "Lozère": "48",
+    "Maine-et-Loire": "49",
+    "Manche": "50",
+    "Marne": "51",
+    "Haute-Marne": "52",
+    "Mayenne": "53",
+    "Meurthe-et-Moselle": "54",
+    "Meuse": "55",
+    "Morbihan": "56",
+    "Moselle": "57",
+    "Nièvre": "58",
+    "Nord": "59",
+    "Oise": "60",
+    "Orne": "61",
+    "Pas-de-Calais": "62",
+    "Puy-de-Dôme": "63",
+    "Pyrénées-Atlantiques": "64",
+    "Hautes-Pyrénées": "65",
+    "Pyrénées-Orientales": "66",
+    "Bas-Rhin": "67",
+    "Haut-Rhin": "68",
+    "Rhône": "69",
+    "Haute-Saône": "70",
+    "Saône-et-Loire": "71",
+    "Sarthe": "72",
+    "Savoie": "73",
+    "Haute-Savoie": "74",
+    "Paris": "75",
+    "Seine-Maritime": "76",
+    "Seine-et-Marne": "77",
+    "Yvelines": "78",
+    "Deux-Sèvres": "79",
+    "Somme": "80",
+    "Tarn": "81",
+    "Tarn-et-Garonne": "82",
+    "Var": "83",
+    "Vaucluse": "84",
+    "Vendée": "85",
+    "Vienne": "86",
+    "Haute-Vienne": "87",
+    "Vosges": "88",
+    "Yonne": "89",
+    "Territoire de Belfort": "90",
+    "Essonne": "91",
+    "Hauts-de-Seine": "92",
+    "Seine-Saint-Denis": "93",
+    "Val-de-Marne": "94",
+    "Val-d'Oise": "95",
+    "Guadeloupe": "971",
+    "Martinique": "972",
+    "Guyane": "973",
+    "La Réunion": "974",
+    "Mayotte": "976",
+  };
+
+
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
-  List<dynamic> _allResults = [];
   Map<String, List<LatLng>> _allDeptContours = {};
   List<Polygon> _visiblePolygons = [];
 
@@ -125,78 +235,58 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void fetchInitialResults() async {
+  void fetchResults() async {
     setState(() {
       _error = '';
       _filteredResults = [];
-      _availableParametres = [];
-      _selectedParametre = null;
       _isLoading = true;
     });
+
+    List<dynamic> results = [];
+    final nom = _deptController.text.trim();
+    final code = nomToCodeDepartement[nom];
+
     try {
-      final results = await api.getResults(
-          _deptController.text.trim(),
-          '${_yearSelected.first}-01-01%2000%3A00%3A00',
-          '${_yearSelected.first}-12-31%2023%3A59%3A59');
-      final inputDept = _deptController.text.trim().toLowerCase();
-      final deptResults = results
-          .where((r) =>
-              r['nom_departement']?.toString().toLowerCase() == inputDept)
-          .toList();
-
-      _allResults = deptResults;
-
-      final parametres = deptResults
-          .map((e) => e['libelle_parametre'])
-          .whereType<String>()
-          .toSet()
-          .toList();
-      setState(() => _availableParametres = parametres);
-
-      if (parametres.isEmpty) {
+      results = await api.getResults(
+        code,
+        '${_yearSelected.first}-01-01%2000%3A00%3A00',
+        '${_yearSelected.first}-12-31%2023%3A59%3A59',
+        _selectedParametre,
+      );
+      if (results.isEmpty) {
         setState(() => _error = 'Aucun paramètre trouvé pour ce département.');
       }
-
       updateVisibleContour(_deptController.text);
     } catch (e) {
       setState(() => _error = 'Erreur lors du chargement des données.');
     }
+
     setState(() {
       _isLoading = false;
     });
-  }
 
-  void onParametreSelected(String? param) {
-    setState(() {
-      _selectedParametre = param;
-      _filteredResults = [];
-    });
-    List<ChartData> chartData = [];
-    if (param != null) {
-      final results =
-          _allResults.where((e) => e['libelle_parametre'] == param).toList();
-
-      final filtered = <Map<String, dynamic>>[];
-      for (var result in results) {
-        filtered.add({
-          'libelle_parametre': result['libelle_parametre'],
-          'date_prelevement': result['date_prelevement'],
-          'nom_commune': result['nom_commune'],
-          'resultat_numerique': result['resultat_numerique'],
-        });
-      }
-      setState(() => _filteredResults = filtered);
+    final filtered = <Map<String, dynamic>>[];
+    for (var result in results) {
+      filtered.add({
+        'libelle_parametre': result['libelle_parametre'],
+        'date_prelevement': result['date_prelevement'],
+        'nom_commune': result['nom_commune'],
+        'resultat_numerique': result['resultat_numerique'],
+      });
     }
+
+    setState(() => _filteredResults = filtered);
+    print(filtered.length);
+    List<ChartData> chartData = [];
     for (var i = 0; i < _filteredResults.length; i++) {
       chartData.add(ChartData(
         _filteredResults[i]['date_prelevement'],
         _filteredResults[i]['resultat_numerique'],
       ));
     }
+
     setState(() => _chartData = chartData);
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +340,6 @@ class _MyAppState extends State<MyApp> {
                               });
 
                               print("Département détecté : $departement");
-                              fetchInitialResults();
                               updateVisibleContour(departement);
                             } else {
                               print("Erreur API : ${response.statusCode}");
@@ -339,29 +428,39 @@ class _MyAppState extends State<MyApp> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
+                    DropdownButton<String>(
+                      value: _selectedParametre != null
+                          ? parametres.entries
+                              .firstWhere(
+                                  (entry) => entry.value == _selectedParametre)
+                              .key
+                          : null,
+                      hint: const Text("Choisir un paramètre d'analyse"),
+                      isExpanded: true,
+                      items: parametres.keys.map((label) {
+                        return DropdownMenuItem<String>(
+                          value: label,
+                          child: Text(label),
+                        );
+                      }).toList(),
+                      onChanged: (String? newLabel) {
+                        setState(() {
+                          _selectedParametre = parametres[newLabel]!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 15),
                     ElevatedButton(
-                      onPressed: fetchInitialResults,
+                      onPressed: fetchResults,
                       child: const Text('Valider les choix'),
                     ),
                     const SizedBox(height: 15),
-                    _isLoading ? LinearProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.blue)):
-                    const SizedBox(height: 0),
-                    if (_availableParametres.isNotEmpty)
-                      DropdownButton<String>(
-                        value: _selectedParametre,
-                        hint: const Text("Choisir un paramètre d'analyse"),
-                        isExpanded: true,
-                        items: _availableParametres.map((param) {
-                          return DropdownMenuItem(
-                            value: param,
-                            child: Text(param),
-                          );
-                        }).toList(),
-                        onChanged: onParametreSelected,
-                      ),
-
-                    const SizedBox(height: 15),
+                    _isLoading
+                        ? LinearProgressIndicator(
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.blue))
+                        : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
                     Expanded(
