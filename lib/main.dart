@@ -7,8 +7,14 @@ import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 // push pour montrer à ma mère
+
+String formatDate(String isoDate) {
+  final date = DateTime.parse(isoDate);
+  return DateFormat('dd-MM').format(date);
+}
 
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr =
@@ -54,7 +60,7 @@ class EauPotableApi {
           'format': 'json',
           'code_departement': codeDepartement,
           'code_parametre_se': parametre,
-          'size': 5000,
+          'size': 10000,
           'date_min_prelevement': dateMin,
           'date_max_prelevement': dateMax,
         },
@@ -80,7 +86,7 @@ class _MyAppState extends State<MyApp> {
 
   List<Map<String, dynamic>> _filteredResults = [];
 
-  Set<String> _yearSelected = {"2025"};
+  String? _yearSelected;
   bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
@@ -92,6 +98,10 @@ class _MyAppState extends State<MyApp> {
     "Ammonium": "NH4",
     "Chlore": "CL2TOT",
   };
+
+  final List<String> years = [
+    for (int year = 2025; year >= 2019; year--) year.toString()
+  ];
 
   final Map<String, String> nomToCodeDepartement = {
     "Ain": "01",
@@ -197,7 +207,6 @@ class _MyAppState extends State<MyApp> {
     "Mayotte": "976",
   };
 
-
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
@@ -245,20 +254,27 @@ class _MyAppState extends State<MyApp> {
     List<dynamic> results = [];
     final nom = _deptController.text.trim();
     final code = nomToCodeDepartement[nom];
-
-    try {
-      results = await api.getResults(
-        code,
-        '${_yearSelected.first}-01-01%2000%3A00%3A00',
-        '${_yearSelected.first}-12-31%2023%3A59%3A59',
-        _selectedParametre,
-      );
-      if (results.isEmpty) {
-        setState(() => _error = 'Aucun paramètre trouvé pour ce département.');
+    print(_yearSelected);
+    print(_selectedParametre);
+    if (_yearSelected != null && code != null && _selectedParametre != null) {
+      try {
+        results = await api.getResults(
+          code,
+          '$_yearSelected-01-01%2000%3A00%3A00',
+          '$_yearSelected-12-31%2023%3A59%3A59',
+          _selectedParametre,
+        );
+        if (results.isEmpty) {
+          setState(() => _error =
+              'Erreur de chargement, veuillez renseigner tous les paramètres.');
+        }
+        updateVisibleContour(_deptController.text);
+      } catch (e) {
+        setState(() => _error = 'Erreur lors du chargement des données.');
       }
-      updateVisibleContour(_deptController.text);
-    } catch (e) {
-      setState(() => _error = 'Erreur lors du chargement des données.');
+    } else {
+      setState(() => _error =
+          'Erreur de chargement, veuillez renseigner tous les paramètres.');
     }
 
     setState(() {
@@ -272,11 +288,11 @@ class _MyAppState extends State<MyApp> {
         'date_prelevement': result['date_prelevement'],
         'nom_commune': result['nom_commune'],
         'resultat_numerique': result['resultat_numerique'],
+        'conclusion': result['conclusion_conformite_prelevement']
       });
     }
 
     setState(() => _filteredResults = filtered);
-    print(filtered.length);
     List<ChartData> chartData = [];
     for (var i = 0; i < _filteredResults.length; i++) {
       chartData.add(ChartData(
@@ -294,83 +310,103 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
-            title: const Text("Qualité de l'eau - Recherche"),
-            centerTitle: true),
+          title: const Text("Qualité de l'eau potable - Recherche"),
+          centerTitle: true,
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          //elevation: 100,
+          leading: IconTheme(
+            data: IconThemeData(
+              color: Colors.white,
+              size: 30,
+            ),
+            child: Icon(Icons.water_drop),
+          ),
+        ),
         body: Row(
           children: [
             Expanded(
               flex: 1,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.all(Radius.circular(20)),
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                        initialCenter: LatLng(46.603354, 1.888334),
-                        initialZoom: 5.5,
-                        onTap: (tapPosition, point) async {
-                          setState(() {
-                            _selectedPosition = point;
-                          });
-
-                          final lat = point.latitude;
-                          final lon = point.longitude;
-
-                          final url = Uri.parse(
-                              'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json');
-
-                          try {
-                            final response = await http.get(url, headers: {
-                              'User-Agent': 'FlutterApp (bdelaverny@gmail.com)'
+                child: Card(
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.all(Radius.circular(20)),
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                          initialCenter: LatLng(46.603354, 1.888334),
+                          initialZoom: 5.5,
+                          onTap: (tapPosition, point) async {
+                            setState(() {
+                              _selectedPosition = point;
                             });
 
-                            if (response.statusCode == 200) {
-                              final data = json.decode(response.body);
-                              final address = data['address'];
-                              final departement = address['county'] ??
-                                  address['state_district'] ??
-                                  address['state'] ??
-                                  'Département inconnu';
-                              print(
-                                  "Adresse complète : ${jsonEncode(address)}");
+                            final lat = point.latitude;
+                            final lon = point.longitude;
 
-                              setState(() {
-                                _deptController.text = departement;
+                            final url = Uri.parse(
+                                'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lon&format=json');
+
+                            try {
+                              final response = await http.get(url, headers: {
+                                'User-Agent':
+                                    'FlutterApp (bdelaverny@gmail.com)'
                               });
 
-                              print("Département détecté : $departement");
-                              updateVisibleContour(departement);
-                            } else {
-                              print("Erreur API : ${response.statusCode}");
+                              if (response.statusCode == 200) {
+                                final data = json.decode(response.body);
+                                final address = data['address'];
+                                final departement = address['county'] ??
+                                    address['state_district'] ??
+                                    address['state'] ??
+                                    'Département inconnu';
+                                print(
+                                    "Adresse complète : ${jsonEncode(address)}");
+
+                                setState(() {
+                                  _deptController.text = departement;
+                                });
+
+                                print("Département détecté : $departement");
+                                updateVisibleContour(departement);
+                              } else {
+                                print("Erreur API : ${response.statusCode}");
+                              }
+                            } catch (e) {
+                              print("Erreur reverse geocoding : $e");
                             }
-                          } catch (e) {
-                            print("Erreur reverse geocoding : $e");
-                          }
-                        }),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-                        tileProvider: CancellableNetworkTileProvider(),
-                      ),
-                      PolygonLayer(polygons: _visiblePolygons),
-                      if (_selectedPosition != null)
-                        MarkerLayer(
-                          markers: [
-                            Marker(
-                              point: _selectedPosition!,
-                              width: 40,
-                              height: 40,
-                              child: const Icon(
-                                Icons.location_on,
-                                color: Colors.red,
-                                size: 40,
-                              ),
-                            ),
-                          ],
+                          }),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                          tileProvider: CancellableNetworkTileProvider(),
                         ),
-                    ],
+                        PolygonLayer(polygons: _visiblePolygons),
+                        if (_selectedPosition != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: _selectedPosition!,
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -382,78 +418,69 @@ class _MyAppState extends State<MyApp> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SegmentedButton<String>(
-                      segments: const [
-                        ButtonSegment(
-                          value: "2025",
-                          label: Text("2025"),
-                        ),
-                        ButtonSegment(
-                          value: "2024",
-                          label: Text("2024"),
-                        ),
-                        ButtonSegment(
-                          value: "2023",
-                          label: Text("2023"),
-                        ),
-                        ButtonSegment(
-                          value: "2022",
-                          label: Text("2022"),
-                        ),
-                        ButtonSegment(
-                          value: "2021",
-                          label: Text("2021"),
-                        ),
-                        ButtonSegment(
-                          value: "2020",
-                          label: Text("2020"),
-                        ),
-                        ButtonSegment(
-                          value: "2019",
-                          label: Text("2019"),
-                        ),
-                      ],
-                      selected: _yearSelected,
-                      onSelectionChanged: (Set<String> newSelection) {
-                        setState(() {
-                          _yearSelected = newSelection;
-                        });
-                      },
-                    ),
-                    SizedBox(height: 15),
-                    TextField(
-                      controller: _deptController,
-                      decoration: const InputDecoration(
-                        labelText: 'Entrez le nom du département',
-                        border: OutlineInputBorder(),
+                    Card(
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    ),
-                    const SizedBox(height: 15),
-                    DropdownButton<String>(
-                      value: _selectedParametre != null
-                          ? parametres.entries
-                              .firstWhere(
-                                  (entry) => entry.value == _selectedParametre)
-                              .key
-                          : null,
-                      hint: const Text("Choisir un paramètre d'analyse"),
-                      isExpanded: true,
-                      items: parametres.keys.map((label) {
-                        return DropdownMenuItem<String>(
-                          value: label,
-                          child: Text(label),
-                        );
-                      }).toList(),
-                      onChanged: (String? newLabel) {
-                        setState(() {
-                          _selectedParametre = parametres[newLabel]!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    ElevatedButton(
-                      onPressed: fetchResults,
-                      child: const Text('Valider les choix'),
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(children: [
+                          TextField(
+                            controller: _deptController,
+                            decoration: const InputDecoration(
+                              labelText: 'Entrez le nom du département',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          DropdownButton<String>(
+                            value: _yearSelected,
+                            hint: const Text("Choisir une année"),
+                            isExpanded: true,
+                            items: years.map((year) {
+                              return DropdownMenuItem<String>(
+                                value: year,
+                                child: Text(year),
+                              );
+                            }).toList(),
+                            onChanged: (String? newYear) {
+                              setState(() {
+                                _yearSelected = newYear;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 15),
+                          DropdownButton<String>(
+                            value: _selectedParametre != null
+                                ? parametres.entries
+                                    .firstWhere((entry) =>
+                                        entry.value == _selectedParametre)
+                                    .key
+                                : null,
+                            hint: const Text("Choisir un paramètre d'analyse"),
+                            isExpanded: true,
+                            items: parametres.keys.map((label) {
+                              return DropdownMenuItem<String>(
+                                value: label,
+                                child: Text(label),
+                              );
+                            }).toList(),
+                            onChanged: (String? newLabel) {
+                              setState(() {
+                                _selectedParametre = parametres[newLabel]!;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 15),
+                          ElevatedButton(
+                            onPressed: fetchResults,
+                            child: const Text('Valider les choix'),
+                          ),
+                        ]),
+                      ),
                     ),
                     const SizedBox(height: 15),
                     _isLoading
@@ -463,46 +490,42 @@ class _MyAppState extends State<MyApp> {
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _filteredResults.length,
-                        itemBuilder: (context, index) {
-                          final item = _filteredResults[index];
-                          return ListTile(
-                            title: Text(
-                                item['libelle_parametre'] ?? 'Unité inconnue'),
-                            subtitle: Text(
-                              'Commune : ${item['nom_commune'] ?? 'Inconnue'}\n'
-                              'Date prélèvement : ${item['date_prelevement'] ?? 'Non renseignée'}\n'
-                              'Résultat : ${item['resultat_numerique'] ?? 'N/A'}',
-                            ),
-                          );
-                        },
-                      ),
-                    ),
                     if (_filteredResults.isNotEmpty)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: SfCartesianChart(
-                            title: ChartTitle(
-                                text:
-                                    'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
-                            primaryXAxis: CategoryAxis(),
-                            series: <CartesianSeries>[
-                              LineSeries<ChartData, String>(
-                                dataSource: _chartData,
-                                xValueMapper: (ChartData data, _) => data.x,
-                                yValueMapper: (ChartData data, _) => data.y,
-                              )
-                            ],
+                      Flexible(
+                        child: Card(
+                          elevation: 6,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: SfCartesianChart(
+                              title: ChartTitle(
+                                  text:
+                                      'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
+                              primaryXAxis: DateTimeAxis(
+                                dateFormat: DateFormat('dd/MM'),
+                                intervalType: DateTimeIntervalType.days,
+                              ),
+                              series: <CartesianSeries>[
+                                LineSeries<ChartData, DateTime>(
+                                  dataSource: _chartData,
+                                  xValueMapper: (ChartData data, _) =>
+                                      DateTime.parse(data.date),
+                                  yValueMapper: (ChartData data, _) =>
+                                      data.value,
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       )
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -511,7 +534,8 @@ class _MyAppState extends State<MyApp> {
 }
 
 class ChartData {
-  ChartData(this.x, this.y);
-  final String x;
-  final double? y;
+  final String date;
+  final double value;
+
+  ChartData(this.date, this.value);
 }
