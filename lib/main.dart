@@ -312,7 +312,7 @@ class _MyAppState extends State<MyApp> {
         appBar: AppBar(
           title: const Text("Qualité de l'eau potable - Recherche"),
           centerTitle: true,
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.lightBlueAccent,
           foregroundColor: Colors.white,
           //elevation: 100,
           leading: IconTheme(
@@ -486,7 +486,7 @@ class _MyAppState extends State<MyApp> {
                     _isLoading
                         ? LinearProgressIndicator(
                             valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.blue))
+                                AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent))
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
                       Text(_error, style: const TextStyle(color: Colors.red)),
@@ -516,6 +516,7 @@ class _MyAppState extends State<MyApp> {
                                       DateTime.parse(data.date),
                                   yValueMapper: (ChartData data, _) =>
                                       data.value,
+                                  color: Colors.lightBlueAccent,
                                 )
                               ],
                             ),
