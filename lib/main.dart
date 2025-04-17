@@ -288,7 +288,7 @@ class _MyAppState extends State<MyApp> {
 
         if (results.isEmpty) {
           setState(() => _error =
-              'Erreur de chargement, veuillez renseigner tous les paramètres.');
+              'Pas de résultats disponibles pour les paramètres choisis.');
         }
         updateVisibleContour(_deptController.text);
       } catch (e) {
@@ -348,9 +348,9 @@ class _MyAppState extends State<MyApp> {
         body: Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: Padding(
-                padding: const EdgeInsets.all(5.0),
+                padding: const EdgeInsets.all(3.0),
                 child: Card(
                   elevation: 6,
                   shape: RoundedRectangleBorder(
@@ -436,7 +436,7 @@ class _MyAppState extends State<MyApp> {
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(5.0),
+                padding: const EdgeInsets.all(3.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -528,7 +528,7 @@ class _MyAppState extends State<MyApp> {
                                 AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent))
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
-                      Text(_error, style: const TextStyle(color: Colors.red)),
+                      Text(_error, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center,),
                     if (_filteredResults.isNotEmpty)
                       Flexible(
                         child: Card(
@@ -569,7 +569,7 @@ class _MyAppState extends State<MyApp> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(5.0),
+              padding: const EdgeInsets.all(3.0),
               child: Column(),
           ))
           ],
