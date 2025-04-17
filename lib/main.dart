@@ -87,9 +87,25 @@ class _MyAppState extends State<MyApp> {
   List<Map<String, dynamic>> _filteredResults = [];
 
   String? _yearSelected;
+  String? _monthSelected;
   bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
+
+  final Map<String, String> months = {
+    "Janvier": "01",
+    "Février": "02",
+    "Mars": "03",
+    "Avril": "04",
+    "Mai": "05",
+    "Juin": "06",
+    "Juillet": "07",
+    "Août": "08",
+    "Septembre": "09",
+    "Octobre": "10",
+    "Novembre": "11",
+    "Décembre": "12",
+  };
 
   List<ChartData> _chartData = [];
 
@@ -256,14 +272,20 @@ class _MyAppState extends State<MyApp> {
     final code = nomToCodeDepartement[nom];
     print(_yearSelected);
     print(_selectedParametre);
-    if (_yearSelected != null && code != null && _selectedParametre != null) {
+    if (_yearSelected != null && code != null && _selectedParametre != null && _monthSelected != null) {
       try {
+
+        final int year = int.parse(_yearSelected!);
+        final int month = int.parse(_monthSelected!);
+        final lastDay = DateTime(year, month + 1, 0).day;
+
         results = await api.getResults(
           code,
-          '$_yearSelected-01-01%2000%3A00%3A00',
-          '$_yearSelected-12-31%2023%3A59%3A59',
+          '$_yearSelected-$_monthSelected-01%2000%3A00%3A00',
+          '$_yearSelected-$_monthSelected-${lastDay.toString()}%2023%3A59%3A59',
           _selectedParametre,
         );
+
         if (results.isEmpty) {
           setState(() => _error =
               'Erreur de chargement, veuillez renseigner tous les paramètres.');
@@ -326,9 +348,9 @@ class _MyAppState extends State<MyApp> {
         body: Row(
           children: [
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(5.0),
                 child: Card(
                   elevation: 6,
                   shape: RoundedRectangleBorder(
@@ -412,9 +434,9 @@ class _MyAppState extends State<MyApp> {
               ),
             ),
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(5.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -449,6 +471,23 @@ class _MyAppState extends State<MyApp> {
                             onChanged: (String? newYear) {
                               setState(() {
                                 _yearSelected = newYear;
+                              });
+                            },
+                          ),
+                          const SizedBox(height: 15),
+                          DropdownButton<String>(
+                            value: _monthSelected,
+                            hint: const Text("Choisir un mois"),
+                            isExpanded: true,
+                            items: months.entries.map((month) {
+                              return DropdownMenuItem<String>(
+                                value: month.value,
+                                child: Text(month.key),
+                              );
+                            }).toList(),
+                            onChanged: (String? newMonth) {
+                              setState(() {
+                                _monthSelected = newMonth;
                               });
                             },
                           ),
@@ -527,6 +566,12 @@ class _MyAppState extends State<MyApp> {
                 ),
               ),
             ),
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(5.0),
+              child: Column(),
+          ))
           ],
         ),
       ),
