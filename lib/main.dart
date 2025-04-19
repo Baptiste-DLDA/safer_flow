@@ -74,12 +74,12 @@ class EauPotableApi {
     }
   }
 }
+
 Future<String?> getCodeInsee(String ville) async {
   final nomEncode = Uri.encodeQueryComponent(ville);
 
   final url = Uri.parse(
-      'https://geo.api.gouv.fr/communes?nom=$nomEncode&fields=code,nom&format=json'
-  );
+      'https://geo.api.gouv.fr/communes?nom=$nomEncode&fields=code,nom&format=json');
 
   final response = await http.get(url);
 
@@ -87,14 +87,13 @@ Future<String?> getCodeInsee(String ville) async {
     final data = jsonDecode(response.body);
 
     if (data is List && data.isNotEmpty) {
-
       print('🔍 Résultats Geo API:');
       for (var commune in data) {
         print(' - ${commune["nom"]} (${commune["code"]})');
       }
 
       final correspondance = data.firstWhere(
-            (commune) => normalize(commune['nom']) == normalize(ville),
+        (commune) => normalize(commune['nom']) == normalize(ville),
         orElse: () => null,
       );
       return correspondance != null ? correspondance['code'] : null;
@@ -115,7 +114,6 @@ String normalize(String input) {
       .replaceAll(RegExp(r'[ùûü]'), 'u')
       .replaceAll(RegExp(r'ç'), 'c');
 }
-
 
 void main() => runApp(MyApp());
 
@@ -266,7 +264,7 @@ class _MyAppState extends State<MyApp> {
     "La Réunion": "974",
     "Mayotte": "976",
   };
-
+  late TooltipBehavior _tooltipBehavior;
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
@@ -276,7 +274,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     _communeController.addListener(_tryFetchResults);
-
+    _tooltipBehavior =  TooltipBehavior(enable: true);
     super.initState();
     /*
     loadDepartementContours().then((contours) {
@@ -321,10 +319,11 @@ class _MyAppState extends State<MyApp> {
     final nom = _communeController.text.trim();
     final codeInsee = await getCodeInsee(nom);
     print(codeInsee);
-    if (_yearSelected != null && codeInsee != null && _selectedParametre != null && _monthSelected != null) {
-
+    if (_yearSelected != null &&
+        codeInsee != null &&
+        _selectedParametre != null &&
+        _monthSelected != null) {
       try {
-
         final int year = int.parse(_yearSelected!);
         final int month = int.parse(_monthSelected!);
         final lastDay = DateTime(year, month + 1, 0).day;
@@ -446,7 +445,8 @@ class _MyAppState extends State<MyApp> {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
                                 //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
-                                final commune= address["municipality"] ?? 'Ville inconnue';
+                                final commune =
+                                    address["municipality"] ?? 'Ville inconnue';
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
@@ -523,7 +523,8 @@ class _MyAppState extends State<MyApp> {
                                 label: Text(year),
                               );
                             }).toList(),
-                            selected: _yearSelected != null ? {_yearSelected!} : {},
+                            selected:
+                                _yearSelected != null ? {_yearSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -533,19 +534,22 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                              backgroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                              foregroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
@@ -554,13 +558,15 @@ class _MyAppState extends State<MyApp> {
                           const SizedBox(height: 15),
                           SegmentedButton<String>(
                             segments: months.entries.map((entry) {
-                              final abbr = entry.key.substring(0, 3); // Ex: "Jan", "Fév"
+                              final abbr =
+                                  entry.key.substring(0, 3); // Ex: "Jan", "Fév"
                               return ButtonSegment<String>(
                                 value: entry.value,
                                 label: Text(abbr),
                               );
                             }).toList(),
-                            selected: _monthSelected != null ? {_monthSelected!} : {},
+                            selected:
+                                _monthSelected != null ? {_monthSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -570,19 +576,22 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                              backgroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                              foregroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
@@ -598,12 +607,14 @@ class _MyAppState extends State<MyApp> {
                             }).toList(),
                             selected: _selectedParametre != null
                                 ? {
-                              parametres.entries
-                                  .firstWhere((e) => e.value == _selectedParametre)
-                                  .key
-                            }
+                                    parametres.entries
+                                        .firstWhere((e) =>
+                                            e.value == _selectedParametre)
+                                        .key
+                                  }
                                 : {},
-                            emptySelectionAllowed: true, // ← ajoute cette ligne !
+                            emptySelectionAllowed:
+                                true, // ← ajoute cette ligne !
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
                                 final label = newSelection.first;
@@ -613,29 +624,31 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                              backgroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                              foregroundColor:
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(
+                                  RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
                           ),
 
-
                           const SizedBox(height: 15),
                           //ElevatedButton(
-                            //onPressed: fetchResults,
-                            //child: const Text('Valider les choix'),
+                          //onPressed: fetchResults,
+                          //child: const Text('Valider les choix'),
                           //),
                         ]),
                       ),
@@ -643,11 +656,15 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(height: 15),
                     _isLoading
                         ? LinearProgressIndicator(
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.lightBlueAccent))
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.lightBlueAccent))
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
-                      Text(_error, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center,),
+                      Text(
+                        _error,
+                        style: const TextStyle(color: Colors.red),
+                        textAlign: TextAlign.center,
+                      ),
                     if (_filteredResults.isNotEmpty)
                       Flexible(
                         child: Card(
@@ -667,15 +684,19 @@ class _MyAppState extends State<MyApp> {
                                 dateFormat: DateFormat('dd/MM'),
                                 intervalType: DateTimeIntervalType.days,
                               ),
+                              tooltipBehavior: _tooltipBehavior,
                               series: <CartesianSeries>[
                                 LineSeries<ChartData, DateTime>(
-                                  dataSource: _chartData,
-                                  xValueMapper: (ChartData data, _) =>
-                                      DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) =>
-                                      data.value,
-                                  color: Colors.lightBlueAccent,
-                                )
+                                    dataSource: _chartData,
+                                    enableTooltip: true,
+                                    xValueMapper: (ChartData data, _) =>
+                                        DateTime.parse(data.date),
+                                    yValueMapper: (ChartData data, _) =>
+                                        data.value,
+                                    color: Colors.lightBlueAccent,
+                                    name: '${_filteredResults[0]["libelle_parametre"]}',
+                                    dataLabelSettings:
+                                        DataLabelSettings(isVisible: true))
                               ],
                             ),
                           ),
