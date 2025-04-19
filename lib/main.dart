@@ -232,6 +232,8 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
+    _communeController.addListener(_tryFetchResults);
+
     super.initState();
     /*
     loadDepartementContours().then((contours) {
@@ -329,6 +331,16 @@ class _MyAppState extends State<MyApp> {
     }
 
     setState(() => _chartData = chartData);
+  }
+
+  void _tryFetchResults() {
+    final nom = _communeController.text.trim();
+    if (_yearSelected != null &&
+        _monthSelected != null &&
+        _selectedParametre != null &&
+        nom.isNotEmpty) {
+      fetchResults();
+    }
   }
 
   @override
@@ -461,66 +473,127 @@ class _MyAppState extends State<MyApp> {
                             ),
                           ),
                           const SizedBox(height: 15),
-                          DropdownButton<String>(
-                            value: _yearSelected,
-                            hint: const Text("Choisir une année"),
-                            isExpanded: true,
-                            items: years.map((year) {
-                              return DropdownMenuItem<String>(
+                          SegmentedButton<String>(
+                            segments: years.map((year) {
+                              return ButtonSegment<String>(
                                 value: year,
-                                child: Text(year),
+                                label: Text(year),
                               );
                             }).toList(),
-                            onChanged: (String? newYear) {
+                            selected: _yearSelected != null ? {_yearSelected!} : {},
+                            emptySelectionAllowed: true,
+                            onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
-                                _yearSelected = newYear;
+                                _yearSelected = newSelection.first;
                               });
+                              _tryFetchResults();
                             },
+                            showSelectedIcon: false,
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.lightBlueAccent;
+                                }
+                                return Colors.grey[200];
+                              }),
+                              foregroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.white;
+                                }
+                                return Colors.black87;
+                              }),
+                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                            ),
                           ),
+
                           const SizedBox(height: 15),
-                          DropdownButton<String>(
-                            value: _monthSelected,
-                            hint: const Text("Choisir un mois"),
-                            isExpanded: true,
-                            items: months.entries.map((month) {
-                              return DropdownMenuItem<String>(
-                                value: month.value,
-                                child: Text(month.key),
+                          SegmentedButton<String>(
+                            segments: months.entries.map((entry) {
+                              final abbr = entry.key.substring(0, 3); // Ex: "Jan", "Fév"
+                              return ButtonSegment<String>(
+                                value: entry.value,
+                                label: Text(abbr),
                               );
                             }).toList(),
-                            onChanged: (String? newMonth) {
+                            selected: _monthSelected != null ? {_monthSelected!} : {},
+                            emptySelectionAllowed: true,
+                            onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
-                                _monthSelected = newMonth;
+                                _monthSelected = newSelection.first;
                               });
+                              _tryFetchResults();
                             },
+                            showSelectedIcon: false,
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.lightBlueAccent;
+                                }
+                                return Colors.grey[200];
+                              }),
+                              foregroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.white;
+                                }
+                                return Colors.black87;
+                              }),
+                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                            ),
                           ),
+
                           const SizedBox(height: 15),
-                          DropdownButton<String>(
-                            value: _selectedParametre != null
-                                ? parametres.entries
-                                    .firstWhere((entry) =>
-                                        entry.value == _selectedParametre)
-                                    .key
-                                : null,
-                            hint: const Text("Choisir un paramètre d'analyse"),
-                            isExpanded: true,
-                            items: parametres.keys.map((label) {
-                              return DropdownMenuItem<String>(
+                          SegmentedButton<String>(
+                            segments: parametres.keys.map((label) {
+                              return ButtonSegment<String>(
                                 value: label,
-                                child: Text(label),
+                                label: Text(label),
                               );
                             }).toList(),
-                            onChanged: (String? newLabel) {
+                            selected: _selectedParametre != null
+                                ? {
+                              parametres.entries
+                                  .firstWhere((e) => e.value == _selectedParametre)
+                                  .key
+                            }
+                                : {},
+                            emptySelectionAllowed: true, // ← ajoute cette ligne !
+                            onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
-                                _selectedParametre = parametres[newLabel]!;
+                                final label = newSelection.first;
+                                _selectedParametre = parametres[label]!;
                               });
+                              _tryFetchResults();
                             },
+                            showSelectedIcon: false,
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.lightBlueAccent;
+                                }
+                                return Colors.grey[200];
+                              }),
+                              foregroundColor: MaterialStateProperty.resolveWith((states) {
+                                if (states.contains(MaterialState.selected)) {
+                                  return Colors.white;
+                                }
+                                return Colors.black87;
+                              }),
+                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              )),
+                            ),
                           ),
+
+
                           const SizedBox(height: 15),
-                          ElevatedButton(
-                            onPressed: fetchResults,
-                            child: const Text('Valider les choix'),
-                          ),
+                          //ElevatedButton(
+                            //onPressed: fetchResults,
+                            //child: const Text('Valider les choix'),
+                          //),
                         ]),
                       ),
                     ),
