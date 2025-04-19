@@ -274,9 +274,9 @@ class _MyAppState extends State<MyApp> {
 
     List<dynamic> results = [];
     final nom = _communeController.text.trim();
-    //final code = nomToCodeDepartement[nom];
-    print(nom);
-    if (_yearSelected != null && nom != '' && _selectedParametre != null && _monthSelected != null) {
+    final ville = nom.replaceAll('-', ' ');
+    print(ville);
+    if (_yearSelected != null && ville != '' && _selectedParametre != null && _monthSelected != null) {
 
       try {
 
@@ -285,7 +285,7 @@ class _MyAppState extends State<MyApp> {
         final lastDay = DateTime(year, month + 1, 0).day;
 
         results = await api.getResults(
-          nom,
+          ville,
           '$_yearSelected-$_monthSelected-01%2000%3A00%3A00',
           '$_yearSelected-$_monthSelected-${lastDay.toString()}%2023%3A59%3A59',
           _selectedParametre,
@@ -391,7 +391,7 @@ class _MyAppState extends State<MyApp> {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
                                 //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
-                                final commune= address["city"] ?? address ["town"] ?? address ["village"] ?? 'Ville inconnue';
+                                final commune= address["city"] ?? address["town"]?? address["village"]??'Ville inconnue';
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
