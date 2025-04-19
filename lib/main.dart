@@ -11,11 +11,6 @@ import 'package:intl/intl.dart';
 
 // push pour montrer à ma mère
 
-String formatDate(String isoDate) {
-  final date = DateTime.parse(isoDate);
-  return DateFormat('dd-MM').format(date);
-}
-
 /*
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr =
@@ -274,7 +269,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     _communeController.addListener(_tryFetchResults);
-    _tooltipBehavior =  TooltipBehavior(enable: true);
+    _tooltipBehavior = TooltipBehavior(enable: true);
     super.initState();
     /*
     loadDepartementContours().then((contours) {
@@ -681,22 +676,30 @@ class _MyAppState extends State<MyApp> {
                                   text:
                                       'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
                               primaryXAxis: DateTimeAxis(
-                                dateFormat: DateFormat('dd/MM'),
+                                dateFormat: DateFormat('dd/MM - HH:mm'),
                                 intervalType: DateTimeIntervalType.days,
+                                edgeLabelPlacement: EdgeLabelPlacement.shift,
+                                interval: 1,
+                                maximumLabels: 5,
+                                labelRotation: -45,
                               ),
                               tooltipBehavior: _tooltipBehavior,
                               series: <CartesianSeries>[
                                 LineSeries<ChartData, DateTime>(
-                                    dataSource: _chartData,
-                                    enableTooltip: true,
-                                    xValueMapper: (ChartData data, _) =>
-                                        DateTime.parse(data.date),
-                                    yValueMapper: (ChartData data, _) =>
-                                        data.value,
-                                    color: Colors.lightBlueAccent,
-                                    name: '${_filteredResults[0]["libelle_parametre"]}',
-                                    dataLabelSettings:
-                                        DataLabelSettings(isVisible: true))
+                                  dataSource: _chartData,
+                                  enableTooltip: true,
+                                  xValueMapper: (ChartData data, _) =>
+                                      DateTime.parse(data.date),
+                                  yValueMapper: (ChartData data, _) =>
+                                      data.value,
+                                  color: Colors.lightBlueAccent,
+                                  name:
+                                      '${_filteredResults[0]["libelle_parametre"]}',
+                                  dataLabelSettings:
+                                      DataLabelSettings(isVisible: true),
+                                  markerSettings:
+                                      MarkerSettings(isVisible: true),
+                                )
                               ],
                             ),
                           ),
