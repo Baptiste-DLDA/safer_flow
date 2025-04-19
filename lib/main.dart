@@ -15,7 +15,7 @@ String formatDate(String isoDate) {
   final date = DateTime.parse(isoDate);
   return DateFormat('dd-MM').format(date);
 }
-
+/*
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr =
       await rootBundle.loadString('lib/assets/departements.geojson');
@@ -45,6 +45,7 @@ Future<Map<String, List<LatLng>>> loadDepartementContours() async {
 
   return contours;
 }
+*/
 
 class EauPotableApi {
   final String rootPath =
@@ -52,13 +53,13 @@ class EauPotableApi {
   final Dio dio = Dio();
 
   Future<List<dynamic>> getResults(
-      codeDepartement, dateMin, dateMax, parametre) async {
+      nomCommune, dateMin, dateMax, parametre) async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
-          'code_departement': codeDepartement,
+          'nom_commune': nomCommune,
           'code_parametre_se': parametre,
           'size': 10000,
           'date_min_prelevement': dateMin,
@@ -82,7 +83,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final EauPotableApi api = EauPotableApi();
-  final TextEditingController _deptController = TextEditingController();
+  final TextEditingController _communeController = TextEditingController();
 
   List<Map<String, dynamic>> _filteredResults = [];
 
@@ -226,19 +227,21 @@ class _MyAppState extends State<MyApp> {
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
-  Map<String, List<LatLng>> _allDeptContours = {};
+  //Map<String, List<LatLng>> _allDeptContours = {};
   List<Polygon> _visiblePolygons = [];
 
   @override
   void initState() {
     super.initState();
+    /*
     loadDepartementContours().then((contours) {
       setState(() {
         _allDeptContours = contours;
       });
     });
   }
-
+   */
+/*
   void updateVisibleContour(String? nomDept) {
     if (nomDept == null) return;
 
@@ -258,6 +261,8 @@ class _MyAppState extends State<MyApp> {
     } else {
       setState(() => _visiblePolygons = []);
     }
+
+ */
   }
 
   void fetchResults() async {
@@ -268,11 +273,11 @@ class _MyAppState extends State<MyApp> {
     });
 
     List<dynamic> results = [];
-    final nom = _deptController.text.trim();
-    final code = nomToCodeDepartement[nom];
-    print(_yearSelected);
-    print(_selectedParametre);
-    if (_yearSelected != null && code != null && _selectedParametre != null && _monthSelected != null) {
+    final nom = _communeController.text.trim();
+    //final code = nomToCodeDepartement[nom];
+    print(nom);
+    if (_yearSelected != null && nom != '' && _selectedParametre != null && _monthSelected != null) {
+
       try {
 
         final int year = int.parse(_yearSelected!);
@@ -280,7 +285,7 @@ class _MyAppState extends State<MyApp> {
         final lastDay = DateTime(year, month + 1, 0).day;
 
         results = await api.getResults(
-          code,
+          nom,
           '$_yearSelected-$_monthSelected-01%2000%3A00%3A00',
           '$_yearSelected-$_monthSelected-${lastDay.toString()}%2023%3A59%3A59',
           _selectedParametre,
@@ -290,7 +295,7 @@ class _MyAppState extends State<MyApp> {
           setState(() => _error =
               'Pas de résultats disponibles pour les paramètres choisis.');
         }
-        updateVisibleContour(_deptController.text);
+        //updateVisibleContour(_deptController.text);
       } catch (e) {
         setState(() => _error = 'Erreur lors du chargement des données.');
       }
@@ -313,7 +318,7 @@ class _MyAppState extends State<MyApp> {
         'conclusion': result['conclusion_conformite_prelevement']
       });
     }
-
+    print(filtered);
     setState(() => _filteredResults = filtered);
     List<ChartData> chartData = [];
     for (var i = 0; i < _filteredResults.length; i++) {
@@ -385,19 +390,17 @@ class _MyAppState extends State<MyApp> {
                               if (response.statusCode == 200) {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
-                                final departement = address['county'] ??
-                                    address['state_district'] ??
-                                    address['state'] ??
-                                    'Département inconnu';
+                                //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
+                                final commune= address["city"] ?? address ["town"] ?? address ["village"] ?? 'Ville inconnue';
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
                                 setState(() {
-                                  _deptController.text = departement;
+                                  _communeController.text = commune;
                                 });
 
-                                print("Département détecté : $departement");
-                                updateVisibleContour(departement);
+                                print("Ville détecté : $commune");
+                                //updateVisibleContour(departement);
                               } else {
                                 print("Erreur API : ${response.statusCode}");
                               }
@@ -451,9 +454,9 @@ class _MyAppState extends State<MyApp> {
                         padding: const EdgeInsets.all(16.0),
                         child: Column(children: [
                           TextField(
-                            controller: _deptController,
+                            controller: _communeController,
                             decoration: const InputDecoration(
-                              labelText: 'Entrez le nom du département',
+                              labelText: 'Entrez le nom de la ville',
                               border: OutlineInputBorder(),
                             ),
                           ),
@@ -566,12 +569,6 @@ class _MyAppState extends State<MyApp> {
                 ),
               ),
             ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(3.0),
-              child: Column(),
-          ))
           ],
         ),
       ),
