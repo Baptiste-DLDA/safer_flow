@@ -87,6 +87,12 @@ Future<String?> getCodeInsee(String ville) async {
     final data = jsonDecode(response.body);
 
     if (data is List && data.isNotEmpty) {
+
+      print('🔍 Résultats Geo API:');
+      for (var commune in data) {
+        print(' - ${commune["nom"]} (${commune["code"]})');
+      }
+
       final correspondance = data.firstWhere(
             (commune) => normalize(commune['nom']) == normalize(ville),
         orElse: () => null,
@@ -313,11 +319,9 @@ class _MyAppState extends State<MyApp> {
 
     List<dynamic> results = [];
     final nom = _communeController.text.trim();
-    final ville = nom.replaceAll('-', ' ');
-    print(ville);
-    final codeInsee = await getCodeInsee(ville);
+    final codeInsee = await getCodeInsee(nom);
     print(codeInsee);
-    if (_yearSelected != null && ville != '' && _selectedParametre != null && _monthSelected != null) {
+    if (_yearSelected != null && codeInsee != null && _selectedParametre != null && _monthSelected != null) {
 
       try {
 
