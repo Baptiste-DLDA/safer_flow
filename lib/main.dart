@@ -529,19 +529,19 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
@@ -566,19 +566,19 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
@@ -609,19 +609,19 @@ class _MyAppState extends State<MyApp> {
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[200];
                               }),
-                              foregroundColor: MaterialStateProperty.resolveWith((states) {
-                                if (states.contains(MaterialState.selected)) {
+                              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                                if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
                                 return Colors.black87;
                               }),
-                              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                              shape: WidgetStateProperty.all(RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               )),
                             ),
