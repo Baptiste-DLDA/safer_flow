@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:flutter/services.dart';
+//import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 // push pour montrer à ma mère
@@ -15,6 +15,7 @@ String formatDate(String isoDate) {
   final date = DateTime.parse(isoDate);
   return DateFormat('dd-MM').format(date);
 }
+
 /*
 Future<Map<String, List<LatLng>>> loadDepartementContours() async {
   final String geoJsonStr =
@@ -53,13 +54,13 @@ class EauPotableApi {
   final Dio dio = Dio();
 
   Future<List<dynamic>> getResults(
-      nomCommune, dateMin, dateMax, parametre) async {
+      codeCommune, dateMin, dateMax, parametre) async {
     try {
       final response = await dio.get(
         rootPath,
         queryParameters: {
           'format': 'json',
-          'nom_commune': nomCommune,
+          'code_commune': codeCommune,
           'code_parametre_se': parametre,
           'size': 10000,
           'date_min_prelevement': dateMin,
@@ -73,6 +74,42 @@ class EauPotableApi {
     }
   }
 }
+Future<String?> getCodeInsee(String ville) async {
+  final nomEncode = Uri.encodeQueryComponent(ville);
+
+  final url = Uri.parse(
+      'https://geo.api.gouv.fr/communes?nom=$nomEncode&fields=code,nom&format=json'
+  );
+
+  final response = await http.get(url);
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+
+    if (data is List && data.isNotEmpty) {
+      final correspondance = data.firstWhere(
+            (commune) => normalize(commune['nom']) == normalize(ville),
+        orElse: () => null,
+      );
+      return correspondance != null ? correspondance['code'] : null;
+    }
+  }
+
+  return null;
+}
+
+String normalize(String input) {
+  return input
+      .toLowerCase()
+      .replaceAll('-', ' ')
+      .replaceAll(RegExp(r'[éèêë]'), 'e')
+      .replaceAll(RegExp(r'[àâä]'), 'a')
+      .replaceAll(RegExp(r'[îï]'), 'i')
+      .replaceAll(RegExp(r'[ôö]'), 'o')
+      .replaceAll(RegExp(r'[ùûü]'), 'u')
+      .replaceAll(RegExp(r'ç'), 'c');
+}
+
 
 void main() => runApp(MyApp());
 
@@ -278,6 +315,8 @@ class _MyAppState extends State<MyApp> {
     final nom = _communeController.text.trim();
     final ville = nom.replaceAll('-', ' ');
     print(ville);
+    final codeInsee = await getCodeInsee(ville);
+    print(codeInsee);
     if (_yearSelected != null && ville != '' && _selectedParametre != null && _monthSelected != null) {
 
       try {
@@ -287,7 +326,7 @@ class _MyAppState extends State<MyApp> {
         final lastDay = DateTime(year, month + 1, 0).day;
 
         results = await api.getResults(
-          ville,
+          codeInsee,
           '$_yearSelected-$_monthSelected-01%2000%3A00%3A00',
           '$_yearSelected-$_monthSelected-${lastDay.toString()}%2023%3A59%3A59',
           _selectedParametre,
@@ -365,7 +404,7 @@ class _MyAppState extends State<MyApp> {
         body: Row(
           children: [
             Expanded(
-              flex: 3,
+              flex: 2,
               child: Padding(
                 padding: const EdgeInsets.all(3.0),
                 child: Card(
@@ -403,7 +442,7 @@ class _MyAppState extends State<MyApp> {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
                                 //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
-                                final commune= address["city"] ?? address["town"]?? address["village"]??'Ville inconnue';
+                                final commune= address["municipality"] ?? 'Ville inconnue';
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
