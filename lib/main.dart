@@ -357,11 +357,13 @@ class _MyAppState extends State<MyApp> {
         'conclusion': result['conclusion_conformite_prelevement']
       });
     }
-    print(filtered);
+
     setState(() => _filteredResults = filtered);
     List<ChartData> chartData = [];
     String? lastDate;
-
+    print(_filteredResults);
+    _filteredResults.removeWhere((element) => element["resultat_numerique"] == null);
+    print(_filteredResults);
     for (int i = 0; i < _filteredResults.length;) {
       final currentDate = _filteredResults[i]["date_prelevement"];
 
@@ -381,7 +383,7 @@ class _MyAppState extends State<MyApp> {
     }
     setState(() => _chartData = chartData);
 
-    if (_chartData.length==1) {
+    if (_chartData.length==1 || _chartData.isEmpty) {
       setState(() =>
       _error = "Pas assez de données disponibles pour tracer un graphe.");
     }
