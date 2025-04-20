@@ -360,14 +360,31 @@ class _MyAppState extends State<MyApp> {
     print(filtered);
     setState(() => _filteredResults = filtered);
     List<ChartData> chartData = [];
-    for (var i = 0; i < _filteredResults.length; i++) {
+    String? lastDate;
+
+    for (int i = 0; i < _filteredResults.length;) {
+      final currentDate = _filteredResults[i]["date_prelevement"];
+
+      if (currentDate == lastDate) {
+        _filteredResults.removeAt(i);
+      }
+      else {
+        lastDate = currentDate;
+        i++;
+      }
+    }
+    for (int i = 0; i < _filteredResults.length;i++) {
       chartData.add(ChartData(
         _filteredResults[i]['date_prelevement'],
         _filteredResults[i]['resultat_numerique'],
       ));
     }
-
     setState(() => _chartData = chartData);
+
+    if (_chartData.length==1) {
+      setState(() =>
+      _error = "Pas assez de données disponibles pour tracer un graphe.");
+    }
   }
 
   void _tryFetchResults() {
@@ -534,7 +551,7 @@ class _MyAppState extends State<MyApp> {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
-                                return Colors.grey[200];
+                                return Colors.grey[255];
                               }),
                               foregroundColor:
                                   WidgetStateProperty.resolveWith((states) {
@@ -576,7 +593,7 @@ class _MyAppState extends State<MyApp> {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
-                                return Colors.grey[200];
+                                return Colors.grey[255];
                               }),
                               foregroundColor:
                                   WidgetStateProperty.resolveWith((states) {
@@ -624,7 +641,7 @@ class _MyAppState extends State<MyApp> {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
-                                return Colors.grey[200];
+                                return Colors.grey[255];
                               }),
                               foregroundColor:
                                   WidgetStateProperty.resolveWith((states) {
@@ -657,10 +674,11 @@ class _MyAppState extends State<MyApp> {
                     if (_error.isNotEmpty)
                       Text(
                         _error,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
-                    if (_filteredResults.isNotEmpty)
+                    if (_filteredResults.isNotEmpty && _chartData.length>1)
+
                       Flexible(
                         child: Card(
                           elevation: 6,
@@ -672,6 +690,7 @@ class _MyAppState extends State<MyApp> {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SfCartesianChart(
+
                               title: ChartTitle(
                                   text:
                                       'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
