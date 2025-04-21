@@ -152,6 +152,12 @@ class _MyAppState extends State<MyApp> {
     "Chlore": "CL2TOT",
   };
 
+  final Map<String, double> seuilsMax = {
+    "PH": 9.5,
+    "NH4": 0.5,
+    "CL2TOT": 0.5,
+  };
+
   final List<String> years = [
     for (int year = 2025; year >= 2019; year--) year.toString()
   ];
@@ -308,12 +314,14 @@ class _MyAppState extends State<MyApp> {
       _error = '';
       _filteredResults = [];
       _isLoading = true;
+
     });
+    print(seuilsMax[_selectedParametre]);
 
     List<dynamic> results = [];
     final nom = _communeController.text.trim();
     final codeInsee = await getCodeInsee(nom);
-    print(codeInsee);
+
     if (_yearSelected != null &&
         codeInsee != null &&
         _selectedParametre != null &&
@@ -361,9 +369,9 @@ class _MyAppState extends State<MyApp> {
     setState(() => _filteredResults = filtered);
     List<ChartData> chartData = [];
     String? lastDate;
-    print(_filteredResults);
+
     _filteredResults.removeWhere((element) => element["resultat_numerique"] == null);
-    print(_filteredResults);
+
     for (int i = 0; i < _filteredResults.length;) {
       final currentDate = _filteredResults[i]["date_prelevement"];
 
@@ -628,11 +636,12 @@ class _MyAppState extends State<MyApp> {
                                   }
                                 : {},
                             emptySelectionAllowed:
-                                true, // ← ajoute cette ligne !
+                                true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
                                 final label = newSelection.first;
                                 _selectedParametre = parametres[label]!;
+
                               });
                               _tryFetchResults();
                             },
@@ -692,7 +701,7 @@ class _MyAppState extends State<MyApp> {
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SfCartesianChart(
-
+                              legend: Legend(isVisible: true),
                               title: ChartTitle(
                                   text:
                                       'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
@@ -704,6 +713,7 @@ class _MyAppState extends State<MyApp> {
                                 maximumLabels: 5,
                                 labelRotation: -45,
                               ),
+                              primaryYAxis: NumericAxis(),
                               tooltipBehavior: _tooltipBehavior,
                               series: <CartesianSeries>[
                                 LineSeries<ChartData, DateTime>(
@@ -720,7 +730,21 @@ class _MyAppState extends State<MyApp> {
                                       DataLabelSettings(isVisible: true),
                                   markerSettings:
                                       MarkerSettings(isVisible: true),
-                                )
+                                ),
+                                LineSeries<ChartData, DateTime>(
+                                  dataSource: [
+                                    ChartData(_chartData.first.date, seuilsMax[_selectedParametre]!),
+                                    ChartData(_chartData.last.date, seuilsMax[_selectedParametre]!),
+                                  ],
+                                  xValueMapper: (ChartData data, _) => DateTime.parse(data.date),
+                                  yValueMapper: (ChartData data, _) => data.value,
+                                  color: Colors.red,
+                                  name: 'Seuil maximum',
+                                  dashArray: <double>[5, 5],
+                                  dataLabelSettings: DataLabelSettings(isVisible: false),
+                                  markerSettings: MarkerSettings(isVisible: false),
+                                ),
+
                               ],
                             ),
                           ),
