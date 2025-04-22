@@ -93,7 +93,7 @@ class _MyAppState extends State<MyApp> {
   bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
-  String _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois.";
+  String _messageConformite = "";
 
   final Map<String, String> months = {
     "Janvier": "01",
@@ -119,9 +119,8 @@ class _MyAppState extends State<MyApp> {
   };
 
   final Map<String, double> seuilsMax = {
-    "PH": 9.5,
-    "NH4": 0.5,
-    "CL2TOT": 0.5,
+    "PH": 9,
+    "NH4": 0.1,
   };
 
   final List<String> years = [
@@ -141,16 +140,17 @@ class _MyAppState extends State<MyApp> {
     _tooltipBehavior = TooltipBehavior(enable: true);
     super.initState();
   }
-  void messageConformite(){
-    for(var r in _filteredResults){
-      if( r["conformite_pc"]=='N' || r["conformite_bact"]=='N'){
-        _messageConformite="${DateFormat("dd/MM - HH:mm").format(DateTime.parse(r["date_prelevement"]))} : ${r["conclusion"]}";
-      }
+
+  void messageConformite() {
+    for (var r in _filteredResults) {
+      _messageConformite +=
+          "${DateFormat("dd/MM - HH:mm").format(DateTime.parse(r["date_prelevement"]))} : ${r["conclusion"]}\n";
     }
   }
+
   void fetchResults() async {
     setState(() {
-      _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois.";
+      _messageConformite = "";
       _error = '';
       _filteredResults = [];
       _isLoading = true;
@@ -202,8 +202,11 @@ class _MyAppState extends State<MyApp> {
         'nom_commune': result['nom_commune'],
         'resultat_numerique': result['resultat_numerique'],
         'conclusion': result['conclusion_conformite_prelevement'],
-        'conformite_pc' : result["conformite_limites_pc_prelevement"],
-        'conformite_bact' : result["conformite_limites_bact_prelevement"],
+        'conformite_limites_pc': result["conformite_limites_pc_prelevement"],
+        'conformite_limites_bact':
+            result["conformite_limites_bact_prelevement"],
+        'conformite_ref_pc': result["conformite_references_pc_prelevement"],
+        'conformite_ref_bact': result["conformite_references_bact_prelevement"],
       });
     }
 
@@ -510,7 +513,7 @@ class _MyAppState extends State<MyApp> {
                         ]),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 5),
                     _isLoading
                         ? LinearProgressIndicator(
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -526,27 +529,42 @@ class _MyAppState extends State<MyApp> {
                     if (_filteredResults.isNotEmpty &&
                         _chartData.length > 1) ...[
                       Card(
-                          elevation: 6,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        margin: const EdgeInsets.all(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(16.0),
+                          constraints: BoxConstraints(
+                            maxHeight: 180,
                           ),
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                _messageConformite,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Conformité de l'eau :",
                                 style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.normal,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline
                                 ),
-                                textAlign: TextAlign.justify,
-                              )
-
-                                )
+                              ),
+                              const SizedBox(height: 10),
+                              Expanded(
+                                child: SingleChildScrollView(
+                                  child: Text(
+                                    _messageConformite,
+                                    textAlign: TextAlign.justify,
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-
-                      const SizedBox(height: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
                       Flexible(
                         child: Card(
                           elevation: 6,
@@ -564,7 +582,7 @@ class _MyAppState extends State<MyApp> {
                                     'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
                               ),
                               primaryXAxis: DateTimeAxis(
-                                dateFormat: DateFormat('dd/MM - HH:mm'),
+                                dateFormat: DateFormat('dd/MM'),
                                 intervalType: DateTimeIntervalType.days,
                                 edgeLabelPlacement: EdgeLabelPlacement.shift,
                                 interval: 1,
@@ -587,23 +605,45 @@ class _MyAppState extends State<MyApp> {
                                   markerSettings:
                                       MarkerSettings(isVisible: true),
                                 ),
-                                LineSeries<ChartData, DateTime>(
-                                  dataSource: [
-                                    ChartData(_chartData.first.date,
-                                        seuilsMax[_selectedParametre]!),
-                                    ChartData(_chartData.last.date,
-                                        seuilsMax[_selectedParametre]!),
-                                  ],
-                                  xValueMapper: (ChartData data, _) =>
-                                      DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) =>
-                                      data.value,
-                                  color: Colors.red,
-                                  name: 'Seuil maximum sanitaire',
-                                  dashArray: <double>[5, 5],
-                                  markerSettings:
-                                      MarkerSettings(isVisible: false),
-                                ),
+                                if (_selectedParametre == "PH" ||
+                                    _selectedParametre == "NH4") ...[
+                                  LineSeries<ChartData, DateTime>(
+                                    dataSource: [
+                                      ChartData(_chartData.first.date,
+                                          seuilsMax[_selectedParametre]!),
+                                      ChartData(_chartData.last.date,
+                                          seuilsMax[_selectedParametre]!),
+                                    ],
+                                    xValueMapper: (ChartData data, _) =>
+                                        DateTime.parse(data.date),
+                                    yValueMapper: (ChartData data, _) =>
+                                        data.value,
+                                    color: Colors.red,
+                                    name: 'Seuil maximum sanitaire',
+                                    dashArray: <double>[5, 5],
+                                    markerSettings:
+                                        MarkerSettings(isVisible: false),
+                                  ),
+                                ],
+                                if(_selectedParametre=='PH')...[
+                                  LineSeries<ChartData, DateTime>(
+                                    dataSource: [
+                                      ChartData(_chartData.first.date,
+                                          6.5),
+                                      ChartData(_chartData.last.date,
+                                          6.5),
+                                    ],
+                                    xValueMapper: (ChartData data, _) =>
+                                        DateTime.parse(data.date),
+                                    yValueMapper: (ChartData data, _) =>
+                                    data.value,
+                                    color: Colors.green,
+                                    name: 'Seuil minimum sanitaire',
+                                    dashArray: <double>[5, 5],
+                                    markerSettings:
+                                    MarkerSettings(isVisible: false),
+                                  ),
+                                ]
                               ],
                             ),
                           ),
