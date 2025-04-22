@@ -519,23 +519,26 @@ class _MyAppState extends State<MyApp> {
                         style: const TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
-                    if (_filteredResults.isNotEmpty && _chartData.length>1)
-
+                    if (_filteredResults.isNotEmpty && _chartData.length > 1) ...[
+                      Text(
+                        "l'amour de la programmation",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
                       Flexible(
                         child: Card(
                           elevation: 6,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 16),
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SfCartesianChart(
                               legend: Legend(isVisible: true),
                               title: ChartTitle(
-                                  text:
-                                  'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
+                                text: 'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
+                              ),
                               primaryXAxis: DateTimeAxis(
                                 dateFormat: DateFormat('dd/MM - HH:mm'),
                                 intervalType: DateTimeIntervalType.days,
@@ -550,34 +553,34 @@ class _MyAppState extends State<MyApp> {
                                 LineSeries<ChartData, DateTime>(
                                   dataSource: _chartData,
                                   enableTooltip: true,
-                                  xValueMapper: (ChartData data, _) =>
-                                      DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) =>
-                                  data.value,
+                                  xValueMapper: (ChartData data, _) => DateTime.parse(data.date),
+                                  yValueMapper: (ChartData data, _) => data.value,
                                   color: Colors.lightBlueAccent,
-                                  name:
-                                  '${_filteredResults[0]["libelle_parametre"]}',
-                                  markerSettings:
-                                  MarkerSettings(isVisible: true),
+                                  name: '${_filteredResults[0]["libelle_parametre"]}',
+                                  markerSettings: MarkerSettings(isVisible: true),
                                 ),
                                 LineSeries<ChartData, DateTime>(
                                   dataSource: [
-                                    ChartData(_chartData.first.date, seuilsMax[_selectedParametre]!),
-                                    ChartData(_chartData.last.date, seuilsMax[_selectedParametre]!),
+                                    ChartData(
+                                        _chartData.first.date, seuilsMax[_selectedParametre]!),
+                                    ChartData(
+                                        _chartData.last.date, seuilsMax[_selectedParametre]!),
                                   ],
-                                  xValueMapper: (ChartData data, _) => DateTime.parse(data.date),
+                                  xValueMapper: (ChartData data, _) =>
+                                      DateTime.parse(data.date),
                                   yValueMapper: (ChartData data, _) => data.value,
                                   color: Colors.red,
                                   name: 'Seuil maximum sanitaire',
                                   dashArray: <double>[5, 5],
                                   markerSettings: MarkerSettings(isVisible: false),
                                 ),
-
                               ],
                             ),
                           ),
                         ),
-                      )
+                      ),
+                    ],
+
                   ],
                 ),
               ),
