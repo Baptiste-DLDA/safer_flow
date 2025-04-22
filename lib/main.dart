@@ -53,7 +53,7 @@ Future<String?> getCodeInsee(String ville) async {
       }
 
       final correspondance = data.firstWhere(
-            (commune) => normalize(commune['nom']) == normalize(ville),
+        (commune) => normalize(commune['nom']) == normalize(ville),
         orElse: () => null,
       );
       return correspondance != null ? correspondance['code'] : null;
@@ -93,6 +93,7 @@ class _MyAppState extends State<MyApp> {
   bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
+  String _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois";
 
   final Map<String, String> months = {
     "Janvier": "01",
@@ -140,13 +141,19 @@ class _MyAppState extends State<MyApp> {
     _tooltipBehavior = TooltipBehavior(enable: true);
     super.initState();
   }
-
+  void messageConformite(){
+    for(var r in _filteredResults){
+      if( r["conformite_pc"]=='N' || r["conformite_bact"]=='N'){
+        _messageConformite="${DateFormat("dd/MM - HH:mm").format(DateTime.parse(r["date_prelevement"]))} : ${r["conclusion"]}";
+      }
+    }
+  }
   void fetchResults() async {
     setState(() {
+      _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois";
       _error = '';
       _filteredResults = [];
       _isLoading = true;
-
     });
     print(seuilsMax[_selectedParametre]);
 
@@ -172,7 +179,7 @@ class _MyAppState extends State<MyApp> {
 
         if (results.isEmpty) {
           setState(() => _error =
-          'Pas de résultats disponibles pour les paramètres choisis.');
+              'Pas de résultats disponibles pour les paramètres choisis.');
         }
         //updateVisibleContour(_deptController.text);
       } catch (e) {
@@ -180,7 +187,7 @@ class _MyAppState extends State<MyApp> {
       }
     } else {
       setState(() => _error =
-      'Erreur de chargement, veuillez renseigner tous les paramètres.');
+          'Erreur de chargement, veuillez renseigner tous les paramètres.');
     }
 
     setState(() {
@@ -194,7 +201,9 @@ class _MyAppState extends State<MyApp> {
         'date_prelevement': result['date_prelevement'],
         'nom_commune': result['nom_commune'],
         'resultat_numerique': result['resultat_numerique'],
-        'conclusion': result['conclusion_conformite_prelevement']
+        'conclusion': result['conclusion_conformite_prelevement'],
+        'conformite_pc' : result["conformite_limites_pc_prelevement"],
+        'conformite_bact' : result["conformite_limites_bact_prelevement"],
       });
     }
 
@@ -202,20 +211,20 @@ class _MyAppState extends State<MyApp> {
     List<ChartData> chartData = [];
     String? lastDate;
 
-    _filteredResults.removeWhere((element) => element["resultat_numerique"] == null);
+    _filteredResults
+        .removeWhere((element) => element["resultat_numerique"] == null);
 
     for (int i = 0; i < _filteredResults.length;) {
       final currentDate = _filteredResults[i]["date_prelevement"];
 
       if (currentDate == lastDate) {
         _filteredResults.removeAt(i);
-      }
-      else {
+      } else {
         lastDate = currentDate;
         i++;
       }
     }
-    for (int i = 0; i < _filteredResults.length;i++) {
+    for (int i = 0; i < _filteredResults.length; i++) {
       chartData.add(ChartData(
         _filteredResults[i]['date_prelevement'],
         _filteredResults[i]['resultat_numerique'],
@@ -223,10 +232,11 @@ class _MyAppState extends State<MyApp> {
     }
     setState(() => _chartData = chartData);
 
-    if (_chartData.length==1 || _chartData.isEmpty) {
+    if (_chartData.length == 1 || _chartData.isEmpty) {
       setState(() =>
-      _error = "Pas assez de données disponibles pour tracer un graphe.");
+          _error = "Pas assez de données disponibles pour tracer un graphe.");
     }
+    messageConformite();
   }
 
   void _tryFetchResults() {
@@ -270,7 +280,7 @@ class _MyAppState extends State<MyApp> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   margin:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                     child: FlutterMap(
@@ -292,13 +302,15 @@ class _MyAppState extends State<MyApp> {
                             try {
                               final response = await http.get(url, headers: {
                                 'User-Agent':
-                                'FlutterApp (bdelaverny@gmail.com)'
+                                    'FlutterApp (bdelaverny@gmail.com)'
                               });
 
                               if (response.statusCode == 200) {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
-                                final commune = address["municipality"] ?? address["city"] ?? "Ville inconnue";
+                                final commune = address["municipality"] ??
+                                    address["city"] ??
+                                    "Ville inconnue";
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
@@ -317,7 +329,7 @@ class _MyAppState extends State<MyApp> {
                       children: [
                         TileLayer(
                           urlTemplate:
-                          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                           tileProvider: CancellableNetworkTileProvider(),
                         ),
                         PolygonLayer(polygons: _visiblePolygons),
@@ -375,7 +387,7 @@ class _MyAppState extends State<MyApp> {
                               );
                             }).toList(),
                             selected:
-                            _yearSelected != null ? {_yearSelected!} : {},
+                                _yearSelected != null ? {_yearSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -386,14 +398,14 @@ class _MyAppState extends State<MyApp> {
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -401,15 +413,15 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  )),
+                                borderRadius: BorderRadius.circular(10),
+                              )),
                             ),
                           ),
-
                           const SizedBox(height: 15),
                           SegmentedButton<String>(
                             segments: months.entries.map((entry) {
-                              final abbr = (entry.key == "Juin" || entry.key == "Juillet")
+                              final abbr = (entry.key == "Juin" ||
+                                      entry.key == "Juillet")
                                   ? entry.key.substring(0, 4)
                                   : entry.key.substring(0, 3);
                               // Ex: "Jan", "Fév"
@@ -419,7 +431,7 @@ class _MyAppState extends State<MyApp> {
                               );
                             }).toList(),
                             selected:
-                            _monthSelected != null ? {_monthSelected!} : {},
+                                _monthSelected != null ? {_monthSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -430,14 +442,14 @@ class _MyAppState extends State<MyApp> {
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -445,11 +457,10 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  )),
+                                borderRadius: BorderRadius.circular(10),
+                              )),
                             ),
                           ),
-
                           const SizedBox(height: 15),
                           SegmentedButton<String>(
                             segments: parametres.keys.map((label) {
@@ -460,33 +471,31 @@ class _MyAppState extends State<MyApp> {
                             }).toList(),
                             selected: _selectedParametre != null
                                 ? {
-                              parametres.entries
-                                  .firstWhere((e) =>
-                              e.value == _selectedParametre)
-                                  .key
-                            }
+                                    parametres.entries
+                                        .firstWhere((e) =>
+                                            e.value == _selectedParametre)
+                                        .key
+                                  }
                                 : {},
-                            emptySelectionAllowed:
-                            true,
+                            emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
                                 final label = newSelection.first;
                                 _selectedParametre = parametres[label]!;
-
                               });
                               _tryFetchResults();
                             },
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                              WidgetStateProperty.resolveWith((states) {
+                                  WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -494,8 +503,8 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  )),
+                                borderRadius: BorderRadius.circular(10),
+                              )),
                             ),
                           ),
                         ]),
@@ -504,31 +513,44 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(height: 10),
                     _isLoading
                         ? LinearProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.lightBlueAccent))
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.lightBlueAccent))
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
                       Text(
                         _error,
-                        style: const TextStyle(color: Colors.red,fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.red, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
-                    if (_filteredResults.isNotEmpty && _chartData.length > 1) ...[
-
-
+                    if (_filteredResults.isNotEmpty &&
+                        _chartData.length > 1) ...[
+                      Card(
+                          elevation: 6,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 8),
+                          child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(_messageConformite))),
+                      const SizedBox(height: 10),
                       Flexible(
                         child: Card(
                           elevation: 6,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 8),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SfCartesianChart(
                               legend: Legend(isVisible: true),
                               title: ChartTitle(
-                                text: 'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
+                                text:
+                                    'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
                               ),
                               primaryXAxis: DateTimeAxis(
                                 dateFormat: DateFormat('dd/MM - HH:mm'),
@@ -544,26 +566,32 @@ class _MyAppState extends State<MyApp> {
                                 LineSeries<ChartData, DateTime>(
                                   dataSource: _chartData,
                                   enableTooltip: true,
-                                  xValueMapper: (ChartData data, _) => DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) => data.value,
+                                  xValueMapper: (ChartData data, _) =>
+                                      DateTime.parse(data.date),
+                                  yValueMapper: (ChartData data, _) =>
+                                      data.value,
                                   color: Colors.lightBlueAccent,
-                                  name: '${_filteredResults[0]["libelle_parametre"]}',
-                                  markerSettings: MarkerSettings(isVisible: true),
+                                  name:
+                                      '${_filteredResults[0]["libelle_parametre"]}',
+                                  markerSettings:
+                                      MarkerSettings(isVisible: true),
                                 ),
                                 LineSeries<ChartData, DateTime>(
                                   dataSource: [
-                                    ChartData(
-                                        _chartData.first.date, seuilsMax[_selectedParametre]!),
-                                    ChartData(
-                                        _chartData.last.date, seuilsMax[_selectedParametre]!),
+                                    ChartData(_chartData.first.date,
+                                        seuilsMax[_selectedParametre]!),
+                                    ChartData(_chartData.last.date,
+                                        seuilsMax[_selectedParametre]!),
                                   ],
                                   xValueMapper: (ChartData data, _) =>
                                       DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) => data.value,
+                                  yValueMapper: (ChartData data, _) =>
+                                      data.value,
                                   color: Colors.red,
                                   name: 'Seuil maximum sanitaire',
                                   dashArray: <double>[5, 5],
-                                  markerSettings: MarkerSettings(isVisible: false),
+                                  markerSettings:
+                                      MarkerSettings(isVisible: false),
                                 ),
                               ],
                             ),
@@ -571,7 +599,6 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ),
                     ],
-
                   ],
                 ),
               ),
