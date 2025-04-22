@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class EauPotableApi {
   final String rootPath =
@@ -47,11 +48,6 @@ Future<String?> getCodeInsee(String ville) async {
     final data = jsonDecode(response.body);
 
     if (data is List && data.isNotEmpty) {
-      print('🔍 Résultats Geo API:');
-      for (var commune in data) {
-        print(' - ${commune["nom"]} (${commune["code"]})');
-      }
-
       final correspondance = data.firstWhere(
         (commune) => normalize(commune['nom']) == normalize(ville),
         orElse: () => null,
@@ -94,6 +90,9 @@ class _MyAppState extends State<MyApp> {
   String? _selectedParametre;
   String _error = '';
   String _messageConformite = "";
+  String _errorGraph = '';
+  String? _lastCommuneValue;
+  Timer? _debounce;
 
   final Map<String, String> months = {
     "Janvier": "01",
@@ -131,12 +130,21 @@ class _MyAppState extends State<MyApp> {
   LatLng? _selectedPosition;
   final MapController _mapController = MapController();
 
-  //Map<String, List<LatLng>> _allDeptContours = {};
   List<Polygon> _visiblePolygons = [];
 
   @override
   void initState() {
-    _communeController.addListener(_tryFetchResults);
+    _communeController.addListener(() {
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), () {
+        final currentText = _communeController.text;
+        if (_lastCommuneValue != currentText) {
+          _lastCommuneValue = currentText;
+          _tryFetchResults();
+        }
+      });
+    });
+
     _tooltipBehavior = TooltipBehavior(enable: true);
     super.initState();
   }
@@ -154,8 +162,8 @@ class _MyAppState extends State<MyApp> {
       _error = '';
       _filteredResults = [];
       _isLoading = true;
+      _errorGraph = '';
     });
-    print(seuilsMax[_selectedParametre]);
 
     List<dynamic> results = [];
     final nom = _communeController.text.trim();
@@ -181,13 +189,12 @@ class _MyAppState extends State<MyApp> {
           setState(() => _error =
               'Pas de résultats disponibles pour les paramètres choisis.');
         }
-        //updateVisibleContour(_deptController.text);
       } catch (e) {
         setState(() => _error = 'Erreur lors du chargement des données.');
       }
     } else {
       setState(() => _error =
-          'Erreur de chargement, veuillez renseigner tous les paramètres.');
+          'Erreur de chargement, veuillez renseigner correctement tous les paramètres.');
     }
 
     setState(() {
@@ -234,10 +241,9 @@ class _MyAppState extends State<MyApp> {
       ));
     }
     setState(() => _chartData = chartData);
-
     if (_chartData.length == 1 || _chartData.isEmpty) {
-      setState(() =>
-          _error = "Pas assez de données disponibles pour tracer un graphe.");
+      setState(() => _errorGraph =
+          "Pas assez de données disponibles pour tracer un graphe.");
     }
     messageConformite();
   }
@@ -258,7 +264,7 @@ class _MyAppState extends State<MyApp> {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         appBar: AppBar(
-          title: const Text("Qualité de l'eau potable - Recherche"),
+          title: const Text("Qualité de l'eau potable - France"),
           centerTitle: true,
           backgroundColor: Colors.lightBlueAccent,
           foregroundColor: Colors.white,
@@ -282,8 +288,8 @@ class _MyAppState extends State<MyApp> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                     child: FlutterMap(
@@ -376,12 +382,18 @@ class _MyAppState extends State<MyApp> {
                         child: Column(children: [
                           TextField(
                             controller: _communeController,
+                            cursorColor: Colors.black,
                             decoration: const InputDecoration(
                               labelText: 'Entrez le nom de la ville',
                               border: OutlineInputBorder(),
+                              floatingLabelStyle:
+                                  TextStyle(color: Colors.black),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.black),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           SegmentedButton<String>(
                             segments: years.map((year) {
                               return ButtonSegment<String>(
@@ -420,7 +432,7 @@ class _MyAppState extends State<MyApp> {
                               )),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           SegmentedButton<String>(
                             segments: months.entries.map((entry) {
                               final abbr = (entry.key == "Juin" ||
@@ -464,7 +476,7 @@ class _MyAppState extends State<MyApp> {
                               )),
                             ),
                           ),
-                          const SizedBox(height: 15),
+                          const SizedBox(height: 10),
                           SegmentedButton<String>(
                             segments: parametres.keys.map((label) {
                               return ButtonSegment<String>(
@@ -526,14 +538,14 @@ class _MyAppState extends State<MyApp> {
                             color: Colors.red, fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
-                    if (_filteredResults.isNotEmpty &&
-                        _chartData.length > 1) ...[
+                    if (_filteredResults.isNotEmpty) ...[
                       Card(
                         elevation: 6,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        margin: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 8),
                         child: Container(
                           padding: const EdgeInsets.all(16.0),
                           constraints: BoxConstraints(
@@ -545,10 +557,9 @@ class _MyAppState extends State<MyApp> {
                               Text(
                                 "Conformité de l'eau :",
                                 style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline
-                                ),
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.underline),
                               ),
                               const SizedBox(height: 10),
                               Expanded(
@@ -565,90 +576,98 @@ class _MyAppState extends State<MyApp> {
                         ),
                       ),
                       const SizedBox(height: 5),
-                      Flexible(
-                        child: Card(
-                          elevation: 6,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 8),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: SfCartesianChart(
-                              legend: Legend(isVisible: true),
-                              title: ChartTitle(
-                                text:
-                                    'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
-                              ),
-                              primaryXAxis: DateTimeAxis(
-                                dateFormat: DateFormat('dd/MM'),
-                                intervalType: DateTimeIntervalType.days,
-                                edgeLabelPlacement: EdgeLabelPlacement.shift,
-                                interval: 1,
-                                maximumLabels: 5,
-                                labelRotation: -45,
-                              ),
-                              primaryYAxis: NumericAxis(),
-                              tooltipBehavior: _tooltipBehavior,
-                              series: <CartesianSeries>[
-                                LineSeries<ChartData, DateTime>(
-                                  dataSource: _chartData,
-                                  enableTooltip: true,
-                                  xValueMapper: (ChartData data, _) =>
-                                      DateTime.parse(data.date),
-                                  yValueMapper: (ChartData data, _) =>
-                                      data.value,
-                                  color: Colors.lightBlueAccent,
-                                  name:
-                                      '${_filteredResults[0]["libelle_parametre"]}',
-                                  markerSettings:
-                                      MarkerSettings(isVisible: true),
+                      if (_errorGraph.isNotEmpty) ...[
+                        Text(
+                          _errorGraph,
+                          style: const TextStyle(
+                              color: Colors.red, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                      if (_chartData.length > 1) ...[
+                        Flexible(
+                          child: Card(
+                            elevation: 6,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: SfCartesianChart(
+                                legend: Legend(isVisible: true),
+                                title: ChartTitle(
+                                  text:
+                                      'Niveau de ${_filteredResults[0]["libelle_parametre"]}',
                                 ),
-                                if (_selectedParametre == "PH" ||
-                                    _selectedParametre == "NH4") ...[
+                                primaryXAxis: DateTimeAxis(
+                                  dateFormat: DateFormat('dd/MM'),
+                                  intervalType: DateTimeIntervalType.days,
+                                  edgeLabelPlacement: EdgeLabelPlacement.shift,
+                                  interval: 1,
+                                  maximumLabels: 5,
+                                  labelRotation: -45,
+                                ),
+                                primaryYAxis: NumericAxis(),
+                                tooltipBehavior: _tooltipBehavior,
+                                series: <CartesianSeries>[
                                   LineSeries<ChartData, DateTime>(
-                                    dataSource: [
-                                      ChartData(_chartData.first.date,
-                                          seuilsMax[_selectedParametre]!),
-                                      ChartData(_chartData.last.date,
-                                          seuilsMax[_selectedParametre]!),
-                                    ],
+                                    dataSource: _chartData,
+                                    enableTooltip: true,
                                     xValueMapper: (ChartData data, _) =>
                                         DateTime.parse(data.date),
                                     yValueMapper: (ChartData data, _) =>
                                         data.value,
-                                    color: Colors.red,
-                                    name: 'Seuil maximum sanitaire',
-                                    dashArray: <double>[5, 5],
+                                    color: Colors.lightBlueAccent,
+                                    name:
+                                        '${_filteredResults[0]["libelle_parametre"]}',
                                     markerSettings:
-                                        MarkerSettings(isVisible: false),
+                                        MarkerSettings(isVisible: true),
                                   ),
+                                  if (_selectedParametre == "PH" ||
+                                      _selectedParametre == "NH4") ...[
+                                    LineSeries<ChartData, DateTime>(
+                                      dataSource: [
+                                        ChartData(_chartData.first.date,
+                                            seuilsMax[_selectedParametre]!),
+                                        ChartData(_chartData.last.date,
+                                            seuilsMax[_selectedParametre]!),
+                                      ],
+                                      xValueMapper: (ChartData data, _) =>
+                                          DateTime.parse(data.date),
+                                      yValueMapper: (ChartData data, _) =>
+                                          data.value,
+                                      color: Colors.red,
+                                      name: 'Seuil maximum sanitaire',
+                                      dashArray: <double>[5, 5],
+                                      markerSettings:
+                                          MarkerSettings(isVisible: false),
+                                    ),
+                                  ],
+                                  if (_selectedParametre == 'PH') ...[
+                                    LineSeries<ChartData, DateTime>(
+                                      dataSource: [
+                                        ChartData(_chartData.first.date, 6.5),
+                                        ChartData(_chartData.last.date, 6.5),
+                                      ],
+                                      xValueMapper: (ChartData data, _) =>
+                                          DateTime.parse(data.date),
+                                      yValueMapper: (ChartData data, _) =>
+                                          data.value,
+                                      color: Colors.green,
+                                      name: 'Seuil minimum sanitaire',
+                                      dashArray: <double>[5, 5],
+                                      markerSettings:
+                                          MarkerSettings(isVisible: false),
+                                    ),
+                                  ]
                                 ],
-                                if(_selectedParametre=='PH')...[
-                                  LineSeries<ChartData, DateTime>(
-                                    dataSource: [
-                                      ChartData(_chartData.first.date,
-                                          6.5),
-                                      ChartData(_chartData.last.date,
-                                          6.5),
-                                    ],
-                                    xValueMapper: (ChartData data, _) =>
-                                        DateTime.parse(data.date),
-                                    yValueMapper: (ChartData data, _) =>
-                                    data.value,
-                                    color: Colors.green,
-                                    name: 'Seuil minimum sanitaire',
-                                    dashArray: <double>[5, 5],
-                                    markerSettings:
-                                    MarkerSettings(isVisible: false),
-                                  ),
-                                ]
-                              ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
                   ],
                 ),
