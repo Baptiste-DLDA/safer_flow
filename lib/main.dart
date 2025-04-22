@@ -411,8 +411,10 @@ class _MyAppState extends State<MyApp> {
                           const SizedBox(height: 15),
                           SegmentedButton<String>(
                             segments: months.entries.map((entry) {
-                              final abbr =
-                              entry.key.substring(0, 3); // Ex: "Jan", "Fév"
+                              final abbr = (entry.key == "Juin" || entry.key == "Juillet")
+                                  ? entry.key.substring(0, 4)
+                                  : entry.key.substring(0, 3);
+                              // Ex: "Jan", "Fév"
                               return ButtonSegment<String>(
                                 value: entry.value,
                                 label: Text(abbr),
@@ -499,7 +501,6 @@ class _MyAppState extends State<MyApp> {
                             ),
                           ),
 
-                          const SizedBox(height: 15),
                           //ElevatedButton(
                           //onPressed: fetchResults,
                           //child: const Text('Valider les choix'),
@@ -507,7 +508,7 @@ class _MyAppState extends State<MyApp> {
                         ]),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 10),
                     _isLoading
                         ? LinearProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
@@ -520,11 +521,8 @@ class _MyAppState extends State<MyApp> {
                         textAlign: TextAlign.center,
                       ),
                     if (_filteredResults.isNotEmpty && _chartData.length > 1) ...[
-                      Text(
-                        "l'amour de la programmation",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
+
+
                       Flexible(
                         child: Card(
                           elevation: 6,
