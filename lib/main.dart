@@ -53,7 +53,7 @@ Future<String?> getCodeInsee(String ville) async {
       }
 
       final correspondance = data.firstWhere(
-        (commune) => normalize(commune['nom']) == normalize(ville),
+            (commune) => normalize(commune['nom']) == normalize(ville),
         orElse: () => null,
       );
       return correspondance != null ? correspondance['code'] : null;
@@ -172,7 +172,7 @@ class _MyAppState extends State<MyApp> {
 
         if (results.isEmpty) {
           setState(() => _error =
-              'Pas de résultats disponibles pour les paramètres choisis.');
+          'Pas de résultats disponibles pour les paramètres choisis.');
         }
         //updateVisibleContour(_deptController.text);
       } catch (e) {
@@ -180,7 +180,7 @@ class _MyAppState extends State<MyApp> {
       }
     } else {
       setState(() => _error =
-          'Erreur de chargement, veuillez renseigner tous les paramètres.');
+      'Erreur de chargement, veuillez renseigner tous les paramètres.');
     }
 
     setState(() {
@@ -270,7 +270,7 @@ class _MyAppState extends State<MyApp> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: ClipRRect(
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                     child: FlutterMap(
@@ -292,15 +292,14 @@ class _MyAppState extends State<MyApp> {
                             try {
                               final response = await http.get(url, headers: {
                                 'User-Agent':
-                                    'FlutterApp (bdelaverny@gmail.com)'
+                                'FlutterApp (bdelaverny@gmail.com)'
                               });
 
                               if (response.statusCode == 200) {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
                                 //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
-                                final commune =
-                                    address["municipality"] ?? 'Ville inconnue';
+                                final commune = address["municipality"] ?? address["city"] ?? "Ville inconnue";
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
 
@@ -320,7 +319,7 @@ class _MyAppState extends State<MyApp> {
                       children: [
                         TileLayer(
                           urlTemplate:
-                              "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                          "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                           tileProvider: CancellableNetworkTileProvider(),
                         ),
                         PolygonLayer(polygons: _visiblePolygons),
@@ -378,7 +377,7 @@ class _MyAppState extends State<MyApp> {
                               );
                             }).toList(),
                             selected:
-                                _yearSelected != null ? {_yearSelected!} : {},
+                            _yearSelected != null ? {_yearSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -389,14 +388,14 @@ class _MyAppState extends State<MyApp> {
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -404,8 +403,8 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              )),
+                                    borderRadius: BorderRadius.circular(10),
+                                  )),
                             ),
                           ),
 
@@ -413,14 +412,14 @@ class _MyAppState extends State<MyApp> {
                           SegmentedButton<String>(
                             segments: months.entries.map((entry) {
                               final abbr =
-                                  entry.key.substring(0, 3); // Ex: "Jan", "Fév"
+                              entry.key.substring(0, 3); // Ex: "Jan", "Fév"
                               return ButtonSegment<String>(
                                 value: entry.value,
                                 label: Text(abbr),
                               );
                             }).toList(),
                             selected:
-                                _monthSelected != null ? {_monthSelected!} : {},
+                            _monthSelected != null ? {_monthSelected!} : {},
                             emptySelectionAllowed: true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
@@ -431,14 +430,14 @@ class _MyAppState extends State<MyApp> {
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -446,8 +445,8 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              )),
+                                    borderRadius: BorderRadius.circular(10),
+                                  )),
                             ),
                           ),
 
@@ -461,14 +460,14 @@ class _MyAppState extends State<MyApp> {
                             }).toList(),
                             selected: _selectedParametre != null
                                 ? {
-                                    parametres.entries
-                                        .firstWhere((e) =>
-                                            e.value == _selectedParametre)
-                                        .key
-                                  }
+                              parametres.entries
+                                  .firstWhere((e) =>
+                              e.value == _selectedParametre)
+                                  .key
+                            }
                                 : {},
                             emptySelectionAllowed:
-                                true,
+                            true,
                             onSelectionChanged: (Set<String> newSelection) {
                               setState(() {
                                 final label = newSelection.first;
@@ -480,14 +479,14 @@ class _MyAppState extends State<MyApp> {
                             showSelectedIcon: false,
                             style: ButtonStyle(
                               backgroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.lightBlueAccent;
                                 }
                                 return Colors.grey[255];
                               }),
                               foregroundColor:
-                                  WidgetStateProperty.resolveWith((states) {
+                              WidgetStateProperty.resolveWith((states) {
                                 if (states.contains(WidgetState.selected)) {
                                   return Colors.white;
                                 }
@@ -495,8 +494,8 @@ class _MyAppState extends State<MyApp> {
                               }),
                               shape: WidgetStateProperty.all(
                                   RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              )),
+                                    borderRadius: BorderRadius.circular(10),
+                                  )),
                             ),
                           ),
 
@@ -511,8 +510,8 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(height: 15),
                     _isLoading
                         ? LinearProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.lightBlueAccent))
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.lightBlueAccent))
                         : const SizedBox(height: 0),
                     if (_error.isNotEmpty)
                       Text(
@@ -536,7 +535,7 @@ class _MyAppState extends State<MyApp> {
                               legend: Legend(isVisible: true),
                               title: ChartTitle(
                                   text:
-                                      'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
+                                  'Niveau de ${_filteredResults[0]["libelle_parametre"]}'),
                               primaryXAxis: DateTimeAxis(
                                 dateFormat: DateFormat('dd/MM - HH:mm'),
                                 intervalType: DateTimeIntervalType.days,
@@ -554,12 +553,12 @@ class _MyAppState extends State<MyApp> {
                                   xValueMapper: (ChartData data, _) =>
                                       DateTime.parse(data.date),
                                   yValueMapper: (ChartData data, _) =>
-                                      data.value,
+                                  data.value,
                                   color: Colors.lightBlueAccent,
                                   name:
-                                      '${_filteredResults[0]["libelle_parametre"]}',
+                                  '${_filteredResults[0]["libelle_parametre"]}',
                                   markerSettings:
-                                      MarkerSettings(isVisible: true),
+                                  MarkerSettings(isVisible: true),
                                 ),
                                 LineSeries<ChartData, DateTime>(
                                   dataSource: [
