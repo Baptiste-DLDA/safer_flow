@@ -93,7 +93,7 @@ class _MyAppState extends State<MyApp> {
   bool _isLoading = false;
   String? _selectedParametre;
   String _error = '';
-  String _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois";
+  String _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois.";
 
   final Map<String, String> months = {
     "Janvier": "01",
@@ -150,7 +150,7 @@ class _MyAppState extends State<MyApp> {
   }
   void fetchResults() async {
     setState(() {
-      _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois";
+      _messageConformite="Eau conforme aux normes de qualité en vigueur sur l'ensemble du mois.";
       _error = '';
       _filteredResults = [];
       _isLoading = true;
@@ -534,7 +534,18 @@ class _MyAppState extends State<MyApp> {
                               horizontal: 8, vertical: 8),
                           child: Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: Text(_messageConformite))),
+                              child: Text(
+                                _messageConformite,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                ),
+                                textAlign: TextAlign.justify,
+                              )
+
+                                )
+                          ),
+
                       const SizedBox(height: 10),
                       Flexible(
                         child: Card(
