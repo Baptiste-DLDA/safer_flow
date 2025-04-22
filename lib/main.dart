@@ -270,7 +270,7 @@ class _MyAppState extends State<MyApp> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   margin:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   child: ClipRRect(
                     borderRadius: BorderRadius.all(Radius.circular(20)),
                     child: FlutterMap(
@@ -298,7 +298,6 @@ class _MyAppState extends State<MyApp> {
                               if (response.statusCode == 200) {
                                 final data = json.decode(response.body);
                                 final address = data['address'];
-                                //final departement = address['county'] ?? address['state_district'] ?? address['state'] ?? 'Département inconnu';
                                 final commune = address["municipality"] ?? address["city"] ?? "Ville inconnue";
                                 print(
                                     "Adresse complète : ${jsonEncode(address)}");
@@ -308,7 +307,6 @@ class _MyAppState extends State<MyApp> {
                                 });
 
                                 print("Ville détecté : $commune");
-                                //updateVisibleContour(departement);
                               } else {
                                 print("Erreur API : ${response.statusCode}");
                               }
@@ -357,7 +355,7 @@ class _MyAppState extends State<MyApp> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 16),
+                          horizontal: 8, vertical: 8),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(children: [
@@ -500,11 +498,6 @@ class _MyAppState extends State<MyApp> {
                                   )),
                             ),
                           ),
-
-                          //ElevatedButton(
-                          //onPressed: fetchResults,
-                          //child: const Text('Valider les choix'),
-                          //),
                         ]),
                       ),
                     ),
@@ -529,7 +522,7 @@ class _MyAppState extends State<MyApp> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: SfCartesianChart(
